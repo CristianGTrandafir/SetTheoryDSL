@@ -210,7 +210,7 @@ object SetTheory:
         case Add(op1, op2) => op1.eval1 + op2.eval1
         case Sub(op1, op2) => op1.eval1 - op2.eval1
       }
-      
+
     def eval: Any =
       this match{
         case Variable(obj) => obj
@@ -236,16 +236,17 @@ object SetTheory:
     val testCartesianProduct = Product(Identifier("Name1"), Identifier("Name2")).evalCartesianProduct
     println(testCartesianProduct)
 
-/*
-val scanner = java.util.Scanner(System.in)
-breakable {
-  while (true) {
-    val expression = scanner.nextLine()
-    if (expression.contains("stop"))
-      break;
-    expression.eval
-  }
-}
-*/
+
+/*    val scanner = java.util.Scanner(System.in)
+    breakable {
+      while (true) {
+        val expression = scanner.nextLine()
+        if (expression.contains("stop"))
+          break;
+        expression.eval
+      }
+    }*/
+
+
 
 
