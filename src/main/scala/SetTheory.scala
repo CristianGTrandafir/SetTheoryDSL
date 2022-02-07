@@ -3,11 +3,11 @@ object SetTheory:
   val MapOfMaps =  scala.collection.mutable.Map[String,scala.collection.mutable.Map[String,Any]]()
   enum ArithExp:
     case Value(input: BasicType)
-    case Object2(obj: Any)
+    case Variable(obj: Any)
     case Identifier(name: String)
     case Add(op1: ArithExp, op2: ArithExp)
     case Sub(op1: ArithExp, op2: ArithExp)
-    case Insert(op1: Identifier, op2: Object2)
+    case Insert(op1: Identifier, op2: Variable)
     case Delete(op1: Identifier, op2: Identifier)
     case Assign(op1: Identifier, op2: Insert)
     case Check(op1: Identifier, op2: Identifier)
@@ -19,15 +19,10 @@ object SetTheory:
     case Product(op1: Identifier, op2: Identifier)
     val bindingScoping: Map[String, Int] = Map("x"->2, "Adan"->10)
 
-    def eval4: Any =
-      this match{
-        case Object2(obj) => obj
-      }
-
     def eval3: (String, Any) =
       this match {
         //Creates key:value pair for insertion into set
-        case Insert(op1, op2) => (op1.eval2, op2.eval4)
+        case Insert(op1, op2) => (op1.eval2, op2.eval)
       }
 
     def eval2: String =
@@ -208,26 +203,31 @@ object SetTheory:
           return newSymmetricMap
       }
 
-    def eval: BasicType =
+    def eval1: BasicType =
       this match {
         case Value(input) => input
         case Identifier(name) => bindingScoping(name)
-        case Add(op1, op2) => op1.eval + op2.eval
-        case Sub(op1, op2) => op1.eval - op2.eval
+        case Add(op1, op2) => op1.eval1 + op2.eval1
+        case Sub(op1, op2) => op1.eval1 - op2.eval1
+      }
+      
+    def eval: Any =
+      this match{
+        case Variable(obj) => obj
       }
 
   @main def createSetTheoryInputSession(): Unit =
     import ArithExp.*
     import scala.util.control.Breaks._
-    val firstExpression = Sub(Add(Add(Value(2), Value(3)),Identifier("Adan")), Identifier("x")).eval
+    val firstExpression = Sub(Add(Add(Value(2), Value(3)),Identifier("Adan")), Identifier("x")).eval1
     println(firstExpression)
 
-    val hello = Add(Value(5),Value(6)).eval
+    val hello = Add(Value(5),Value(6)).eval1
     println(hello)
-    val testAssign = Assign(Identifier("Name1"), Insert(Identifier("key1"), Object2(1))).eval2
-    val testAssign3 = Assign(Identifier("Name1"), Insert(Identifier("key11"), Object2(11))).eval2
-    val testAssign2 = Assign(Identifier("Name2"), Insert(Identifier("key2"), Object2(2))).eval2
-    val testAssign4 = Assign(Identifier("Name2"), Insert(Identifier("key22"), Object2(22))).eval2
+    val testAssign = Assign(Identifier("Name1"), Insert(Identifier("key1"), Variable(1))).eval2
+    val testAssign3 = Assign(Identifier("Name1"), Insert(Identifier("key11"), Variable(11))).eval2
+    val testAssign2 = Assign(Identifier("Name2"), Insert(Identifier("key2"), Variable(2))).eval2
+    val testAssign4 = Assign(Identifier("Name2"), Insert(Identifier("key22"), Variable(22))).eval2
     //println(testAssign)
     //val testDelete = Delete(Identifier("Name1"), Identifier("key")).eval2
     //println(testDelete)
