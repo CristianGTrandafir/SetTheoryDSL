@@ -1,8 +1,13 @@
+//Cristian Trandafir
+
 import scala.collection.mutable
 
 object SetTheory:
-  val MapOfMaps: mutable.Map[String, mutable.Map[String,Any]] = mutable.Map[String, mutable.Map[String,Any]]()
-  val macroMap: mutable.Map[String, ArithExp] = mutable.Map[String, ArithExp]()
+  private val setMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
+  private val macroMap: mutable.Map[String, ArithExp] = mutable.Map[String, ArithExp]()
+  //private val scopeMap: mutable.Map[String, String] = mutable.Map[String, String]("main" -> "main")
+  //private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("main" -> "main")
+  //private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
   enum ArithExp:
     case Variable(obj: Any)
     case Identifier(name: String)
@@ -16,58 +21,102 @@ object SetTheory:
     case Difference(op1: Identifier, op2: Identifier)
     case Symmetric(op1: Identifier, op2: Identifier)
     case Product(op1: Identifier, op2: Identifier)
-    case Macro(op1: String, op2: ArithExp)
-    case UseMacro(op1: String)
-    val bindingScoping: Map[String, Int] = Map("x"->2, "Adan"->10)
+    //Macro
+    case Macro(op1: Identifier, op2: ArithExp)
+    case UseMacro(op1: Identifier)
+    //Scope
+    //case Scope(op1: Identifier, op2: Identifier, op3: ArithExp)
 
-    private def getExistingSets(op1: Identifier, op2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
-      val newMap = mutable.Map[String,Any]()
-      val firstSetName = op1.eval.asInstanceOf[String]
-      val secondSetName = op2.eval.asInstanceOf[String]
-      if(!MapOfMaps.contains(firstSetName)) {
+    //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
+    private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
+      val firstSetName = setName1.eval.asInstanceOf[String]
+      val secondSetName = setName2.eval.asInstanceOf[String]
+      if(!setMap.contains(firstSetName)) {
         throw new RuntimeException("First set not found")
       }
-      if(!MapOfMaps.contains(secondSetName)) {
+      if(!setMap.contains(secondSetName)) {
         throw new RuntimeException("Second set not found")
       }
-      val firstSet = MapOfMaps(firstSetName).toSet
-      val secondSet = MapOfMaps(secondSetName).toSet
+      val firstSet = setMap(firstSetName).asInstanceOf[mutable.Map[String, Any]].toSet
+      val secondSet = setMap(secondSetName).asInstanceOf[mutable.Map[String, Any]].toSet
       (firstSet, secondSet)
+
+    /*
+    def recursiveResolveScope(map: mutable.Map[String, Any], scopeHierarchyString: String): mutable.Map[String, Any] =
+      //If scope string still has "." delimiter - advance the scope from main -> desiredScope by 1
+      if(scopeHierarchyString.contains(".")) {
+        //main.scope1.scope2 would turn to scope1.scope2
+        val reducedString = scopeHierarchyString.substring(scopeHierarchyString.indexOf("."), scopeHierarchyString.length)
+        //This command would be main(reducedString) which returns the scope1Map that contains scope2Map
+        val newMap = map(reducedString).asInstanceOf[mutable.Map[String, Any]]
+        //Recurse until you get to .scope2, or whatever the last scope is
+        recursiveResolveScope(newMap, reducedString)
+      }
+      //If scope string has no "." delimiter - this is the last scope. Simply return current scope as a map.
+      else {
+        map
+      }
+
+    def resolveScopeToMain(map: mutable.Map[String, Any], scopeHierarchyString: String, searchString: String): mutable.Map[String, Any] =
+      if(scopeHierarchyString.contains(".")) {
+        //main.scope1.scope2 would turn to main.scope1
+        val reducedString = scopeHierarchyString.substring(0, scopeHierarchyString.lastIndexOf("."))
+        //This command would be main(reducedString) which returns the scope1Map that contains scope2Map
+        val newMap = recursiveResolveScope(map, reducedString)
+        //Recurse until you get to main, or if variable found
+        if(!newMap.contains(searchString))
+          resolveScopeToMain(newMap, reducedString, searchString)
+        else
+          newMap
+      }
+      //If scope string has no "." delimiter - this is the first scope. Simply return main scope.
+      else {
+        setMap
+      }
+    */
 
     def eval: Any =
       this match{
+
+        //Just a wrapper method that returns the object passed in
         case Variable(obj) => obj
+
+        //Returns (String, Any) tuple for insertion
         case Insert(op1:Identifier, op2:Any) => (op1.eval, op2.eval)
-        //Inserts op2 into set name found in MapOfMaps
-        case Assign(op1, op2) =>
-          val setName = op1.eval.asInstanceOf[String]
-          val tupleAsAny = op2.eval
+
+        //Inserts op2 into set name found in setMap
+        case Assign(name: Identifier, insertCommand: Insert) =>
+          val setName = name.eval.asInstanceOf[String]
+          val tupleAsAny = insertCommand.eval
+          //In-line function that reseparates the Any into a tuple
           def function(msg: Any): (String, Any) = {
             msg match {
               case (a: String, b: Any) => (a, b)
             }
           }
-          val tuple = function(tupleAsAny)
-          if(!MapOfMaps.contains(setName)){
-            MapOfMaps += (setName -> mutable.Map[String,Any](tuple._1 -> tuple._2))
+          val stringAnyTuple = function(tupleAsAny)
+          if(!setMap.contains(setName)){
+            setMap += (setName -> mutable.Map[String,Any](stringAnyTuple._1 -> stringAnyTuple._2))
           }
           else {
-            val set = MapOfMaps(setName)
-            if(set.contains(tuple._1)){
-              //Fail insertion
+            val set = setMap(setName).asInstanceOf[mutable.Map[String, Any]]
+            if(set.contains(stringAnyTuple._1)){
+              throw new RuntimeException("Failed to insert into set.")
             }
             else {
-              set += (tuple._1 -> tuple._2)
+              set += (stringAnyTuple._1 -> stringAnyTuple._2)
             }
           }
+
+        //Returns a helpful message to the user about the (non)existence of the two set names
         case Check(op1, op2) =>
           val setName = op1.eval.asInstanceOf[String]
           val objectName = op2.eval.asInstanceOf[String]
-          if(!MapOfMaps.contains(setName)){
-            "Set " + setName + " does not contain " + objectName + "."
+          if(!setMap.contains(setName)){
+            "Set " + setName + " does not exist."
           }
           else {
-            val set = MapOfMaps(setName)
+            val set = setMap(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
             if(set.contains(objectName))
               "Set " + setName + " does contain " + objectName + "."
             else {
@@ -75,68 +124,77 @@ object SetTheory:
             }
           }
 
-        case Identifier(name) => name
+        //Just a wrapper method that returns the name as a string
+        case Identifier(name:String) => name
 
-        case Delete(op1: Identifier, op2: Identifier) =>
-          val setName = op1.eval.asInstanceOf[String]
-          val objectName = op2.eval.asInstanceOf[String]
-          if(!MapOfMaps.contains(setName)) {
-            return "Set " + setName + " does not exist. "
+        //Deletes object op2 from set op1
+        case Delete(setIdentifier: Identifier, objectIdentifier: Identifier) =>
+          val setName = setIdentifier.eval.asInstanceOf[String]
+          val objectName = objectIdentifier.eval.asInstanceOf[String]
+          if(!setMap.contains(setName)) {
+            return "Set " + setName + " does not exist."
           }
           else {
-            val set = MapOfMaps(setName)
+            val set = setMap(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
             if(!set.contains(objectName))
               return "Object " + objectName + " does not exist inside " + setName + "."
           }
-          val set = MapOfMaps(setName)
+          val set = setMap(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
           set -= objectName
           "Successful deletion of " + objectName + " from " + setName + "."
 
-        case Union(op1, op2) =>
-          val setTuple = getExistingSets(op1,op2)
+        //Union of 2 sets
+        case Union(setName1:Identifier, setName2:Identifier) =>
+          val setTuple = getExistingSets(setName1,setName2)
           val unionSet = setTuple._1.union(setTuple._2)
           val immutableUnionMap = unionSet.toMap
           val newUnionMap = mutable.Map() ++ immutableUnionMap
           newUnionMap
 
-        case Intersection(op1, op2) =>
-          val setTuple = getExistingSets(op1,op2)
+        //Intersection of 2 sets
+        case Intersection(setName1:Identifier, setName2:Identifier) =>
+          val setTuple = getExistingSets(setName1,setName2)
           val intersectionSet = setTuple._1.intersect(setTuple._2)
           val immutableIntersectionMap = intersectionSet.toMap
           val newIntersectionMap = mutable.Map() ++ immutableIntersectionMap
           newIntersectionMap
 
-        case Symmetric(op1, op2) =>
-          val setTuple = getExistingSets(op1,op2)
+        //Symmetric Difference of 2 sets
+        case Symmetric(setName1:Identifier, setName2:Identifier) =>
+          val setTuple = getExistingSets(setName1,setName2)
           val symmetricSet = setTuple._1.diff(setTuple._2) union setTuple._2.diff(setTuple._1)
           val immutableIntersectionMap = symmetricSet.toMap
           val newSymmetricMap = mutable.Map() ++ immutableIntersectionMap
           newSymmetricMap
 
-        case Difference(op1, op2) =>
-          val setTuple = getExistingSets(op1,op2)
+        //Difference of 2 sets
+        case Difference(setName1:Identifier, setName2:Identifier) =>
+          val setTuple = getExistingSets(setName1,setName2)
           val differenceSet = setTuple._1.diff(setTuple._2)
           val immutableDifferenceMap = differenceSet.toMap
           val newDifferenceMap = mutable.Map() ++ immutableDifferenceMap
           newDifferenceMap
 
-        case Product(op1, op2) =>
-          val secondSetName = op2.eval.asInstanceOf[String]
-          val firstSetName = op1.eval.asInstanceOf[String]
+        //Cartesian Product of 2 sets
+        case Product(setName1:Identifier, setName2:Identifier) =>
+          val secondSetName = setName2.eval.asInstanceOf[String]
+          val firstSetName = setName1.eval.asInstanceOf[String]
           val cartesianMap = mutable.Map[String,Any]()
-          getExistingSets(op1, op2)
-          for((k,v) <- MapOfMaps(firstSetName)) {
-            for((keys,values) <- MapOfMaps(secondSetName))
+          getExistingSets(setName1, setName2) //Checks if sets exist
+          for((k,v) <- setMap(firstSetName).asInstanceOf[mutable.Map[String, Any]]) {
+            for((keys,values) <- setMap(secondSetName).asInstanceOf[mutable.Map[String, Any]])
               cartesianMap += (k+keys -> (v, values))
           }
           cartesianMap
 
-        case Macro(op1, op2) =>
-          macroMap += (op1 -> op2)
+        case Macro(name:Identifier, expression: ArithExp) =>
+          if(macroMap.contains(name.eval.asInstanceOf[String]))
+            macroMap(name.eval.asInstanceOf[String]) = expression
+          macroMap += (name.eval.asInstanceOf[String] -> expression)
 
-        case UseMacro(op1) =>
-          if(macroMap.contains(op1)) {
-            macroMap(op1).eval
+        case UseMacro(name:Identifier) =>
+          if(macroMap.contains(name.eval.asInstanceOf[String])) {
+            macroMap(name.eval.asInstanceOf[String]).eval
           }
           else{
             throw new RuntimeException("Macro doesn't exist")
@@ -145,23 +203,23 @@ object SetTheory:
 
   @main def createSetTheoryInputSession(): Unit =
     import ArithExp.*
-
+    /*
     val testAssign = Assign(Identifier("Name1"), Insert(Identifier("key1"), Variable(1))).eval
     val testAssign3 = Assign(Identifier("Name1"), Insert(Identifier("key11"), Variable(11))).eval
     val testAssign2 = Assign(Identifier("Name2"), Insert(Identifier("key2"), Variable(2))).eval
     val testAssign4 = Assign(Identifier("Name2"), Insert(Identifier("key22"), Variable(22))).eval
-    //println(testAssign)
-    //val testDelete = Delete(Identifier("Name1"), Identifier("key")).eval2
-    //println(testDelete)
+    println(testAssign)
+    val testDelete = Delete(Identifier("Name1"), Identifier("key")).eval2
+    println(testDelete)
     val testUnion = Union(Identifier("Name1"), Identifier("Name2")).eval
     println(testUnion)
     val testCartesianProduct = Product(Identifier("Name1"), Identifier("Name2")).eval
     println(testCartesianProduct)
 
-    Macro("a", Assign(Identifier("Name10"), Insert(Identifier("key10"), Variable(1)))).eval
-    val MacroResult = UseMacro("a").eval
+    Macro(Identifier("a"), Assign(Identifier("Name10"), Insert(Identifier("key10"), Variable(1)))).eval
+    val MacroResult = UseMacro(Identifier("a")).eval
     println(MacroResult)
-
+    */
 
 
 
