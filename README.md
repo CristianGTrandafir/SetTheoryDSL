@@ -3,8 +3,8 @@ Cristian Trandafir
 
 ////////////////*How to set up*///////////////
 
-Write import SetTheory.ArithExp.* at the top of your program.
-This will give you access to all the commands.
+Type "import SetTheory.ArithExp.*" at the top of your program.
+This will give you access to all of the commands.
 
 ////////////////*How the commands work*///////////////
 
@@ -14,6 +14,7 @@ It is a string that can be used to identify a set or object depending on the con
 Assign has 2 parameters.
 The first is the Identifier command for the set name.
 The second is the Insert command for the object name and object.
+Assign is used to create new sets with named elements.
 
 Variable has 1 parameter.
 It can be any object.
@@ -21,12 +22,15 @@ It can be any object.
 Insert has 2 parameters.
 The first is an Identifier command for the object name.
 The second is the object itself (can be anything).
-Insert does not insert a duplicate object into the same scope.
+Insert returns a (String, Any) tuple of the parameters passed in, so calling it by itself is pointless. 
+Call it in an Assign statement.
 
 Delete has 2 parameters.
 The first is an Identifier command for the set name you want to search in for the deletion.
 The second is an Identifier command with the object's name that you want to remove from the set.
-Delete will throw an error is the set name or object name do not exist.
+Delete will throw an error if the set name or object name do not exist.
+Since the addition of Scope, it is also possible to delete sets and scopes with Delete, not just set items.
+Delete(Identifier("scopeName"), Identifier("setOrScope")) will delete the "setOrScope" from the program.
 
 Check has 2 parameters.
 The first is an Identifier command for the set name you want to check.
@@ -35,10 +39,18 @@ Check will return a success or failure message based on the object or set's (non
 
 Macro has 2 parameters.
 The first is an Identifier command for the macro name you want to create.
-The second is an ArithExp command for the set of steps you want to bind the name to.
+The second is any of the other commands listed here for the set of steps you want to bind the name to.
 
 UseMacro has 1 parameter.
 The first is an Identifier command for the macro name you want to use.
+
+Scope has 3 parameters.
+The first is an Identifier command for the scope name you want to create.
+The second is an Identifier command for the scope hierarchy you want to create your new scope in. 
+Every scope starts with the string "main".
+Make sure that when you specify a scope hierarchy you delimit each instance with a "."
+For example, "main.scope1.scope2".
+The third is any other command listed here.
 
 The Set operations are Union, Intersection, Difference, Symmetric (Difference), and (Cartesian) Product.
 Each take 2 Identifiers as their parameters.
@@ -47,10 +59,13 @@ Each Set operation returns a Map representation of the set contents (strings map
 
 ////////////////*How the Set commands are implemented*///////////////
 
-There is a "setMap" data structure that I use as a 2D Mutable Map.
-In the first dimension, there is a mapping between set names and sets (These are implemented as strings and maps respectively).
-In the second dimension, there is a mapping between object names and objects within the parent set/map.
-The object names and objects are mapped as (String->Any).
+There is a setMap data structure that is a mapping of Strings to Anys.
+The way sets are inserted into this data structure is straightforward.
+Consider the following command: 
+Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1)))
+At the first layer, the set name "set10" is mapped to its contents.
+Its contents are composed of tuples of variable names mapped to variables.
+Note that scoping is covered in the "Scope Implementation" section.
 
 The Set commands create a new map.
 The new map is copied with the contents of the first map.
@@ -63,8 +78,42 @@ Then the resulting set is converted back to a mutable map and the map is returne
 
 Macro is implemented in the same way with a macroMap of (String->ArithExp) mappings.
 
+////////////////*Scope Implementation*///////////////
+
+Scopes are treated like sets. 
+The universal scope that every set is a part of is called "main".
+It is the first element in the setMap. 
+Every element added to setMap must be a submap of main.
+
+scopeMap keeps a mapping of the scope hierarchy. main is mapped to main. main.scope1 would be mapped to main. main.scope1.scope2 would be mapped to main.scope1 and so on.
+currentScope keeps a mapping of "current" to the last parent scope passed in by Scope.
+currentMap is a map that holds a subscope of the setMap.
+
+When Scope is called, scopeMap, currentScope, and currentMap are all updated.
+
+The method recursiveResolveScope() is used to navigate from the main scope of the setMap to the specified subscope by the second parameter of Insert.
+The method resolveScopeToMain() is used to start from a subscope, where it checks if a set or scope name exists.
+If it fails, it calls recursiveResolveScope() to get to the next parent scope, then rescan the variables.
+This repeats until no object is found, in which case a new object must be created.
+
+There is support for nested scopes and multiple scopes at the same scope level and anonymous scopes.
+Scopes are just like sets except with an extra level of indirection.
+Note that you cannot overwrite already existing scopes or sets with scopes.
+There is a check in Scope that will throw an error if this is attempted.
+
 ////////////////*Limitations*///////////////
 
 The conversion from maps to sets back to maps will be very costly when the amount of items stored in each map is large.
 
-I did not implement Scope.
+The Identifier command is redundant in almost every case. 
+It is good for forcing new users to learn the language parameters and syntax, but it gets repetitive typing it out when a simple String could be just as good.
+
+Adding scopes makes the setMap grow very fast with multiple nested layers.
+The search time for each variable also increases greatly with the more nested scope you pass in.
+
+When deleting or checking a specific scope, only the scope or set name can be checked or deleted, not the contents.
+This is an unintended consequence of treating scopes and names as equivalent.
+This can be fixed with an overloaded Delete or Check method that takes in an extra parameter to access the sets.
+I did not implement this because it would make the program crash or cause undesired behavior.
+If a user uses Delete with 3 parameters on a set, then the program would crash.
+If a user uses Delete with 2 parameters on a scope, then they would inadvertently delete the entire set rather than one of the elements.

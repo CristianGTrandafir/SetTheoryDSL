@@ -53,4 +53,34 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     val hash = Map[String, Any]("var3var2" -> (1,1), "var1var2" -> (1,1), "var3var4" -> (1,1), "var1var4" -> (1,1))
     p shouldBe hash
   }
+
+  //Test 6
+  behavior of "my first language for set theory operations 6"
+
+  it should "perform arithexp assignments with scope" in {
+    Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1))).eval
+    Assign(Identifier("set20"), Insert(Identifier("var2"), Variable(1))).eval
+    Assign(Identifier("set10"), Insert(Identifier("var3"), Variable(1))).eval
+    Assign(Identifier("set20"), Insert(Identifier("var4"), Variable(1))).eval
+    Scope(Identifier("newScope3"),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1)))).eval
+    //set10 is in parent scope of set30. This should throw an error if it fails - success if program checks parent scopes.
+    Scope(Identifier("newScope3"),Identifier("main"), Union(Identifier("set10"), Identifier("set30"))).eval
+    Scope(Identifier("newScope3"),Identifier("main"), Check(Identifier("newScope3"), Identifier("set30"))).eval shouldBe "Set " + "newScope3" + " does contain " + "set30" + "."
+    Scope(Identifier("newScope3"),Identifier("main"), Delete(Identifier("newScope3"), Identifier("set30"))).eval shouldBe "Successful deletion of " + "set30" + " from " + "newScope3" + "."
+    //Anonymous scope
+    Scope(Identifier(""),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1)))).eval
+    Scope(Identifier(""),Identifier("main"), Check(Identifier(""), Identifier("set30"))).eval shouldBe "Set " + "" + " does contain " + "set30" + "."
+  }
+
+  //Test 7
+  behavior of "my first language for set theory operations 7"
+
+  it should "check if a nested scope contains a set" in {
+    Assign(Identifier("set200"), Insert(Identifier("var2"), Variable(1))).eval
+    Scope(Identifier("newScope30"),Identifier("main"), Assign(Identifier("set200"), Insert(Identifier("var3"), Variable(1)))).eval
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Assign(Identifier("set300"), Insert(Identifier("var4"), Variable(1)))).eval
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300"))).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
+    //newScope30 is in the parent scope of newScope40
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200"))).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
+  }
 }
