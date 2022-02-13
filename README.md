@@ -5,6 +5,13 @@ Cristian Trandafir
 
 Type "import SetTheory.ArithExp.*" at the top of your program.
 This will give you access to all of the commands.
+Simply type the commands listed in the following section with their appropriate parameters, and finish the statement off by calling .eval.
+You can print out the result of .eval-ing the commands for helpful information. 
+Here is an example of a well-formed statement:
+
+Assign(Identifier("Set1"), Insert(Identifier("ObjectName"), Identifier(Object))).eval
+
+This statement will create a set Set1 with the element Object titled ObjectName.
 
 ////////////////*How the commands work*///////////////
 
@@ -117,3 +124,6 @@ This can be fixed with an overloaded Delete or Check method that takes in an ext
 I did not implement this because it would make the program crash or cause undesired behavior.
 If a user uses Delete with 3 parameters on a set, then the program would crash.
 If a user uses Delete with 2 parameters on a scope, then they would inadvertently delete the entire set rather than one of the elements.
+
+One last issue I ran into with my code was that I could never figure out how to return a specific type from case statements.
+This resulted in my code being bloated with .asInstanceOf[Type] statements.

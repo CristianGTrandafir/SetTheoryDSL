@@ -15,21 +15,21 @@ object SetTheory:
   enum ArithExp:
     case Variable(obj: Any)
     case Identifier(name: String)
-    case Insert(op1: Identifier, op2: Variable)
-    case Delete(op1: Identifier, op2: Identifier)
-    case Assign(op1: Identifier, op2: Insert)
-    case Check(op1: Identifier, op2: Identifier)
+    case Insert(objectName: Identifier, obj: Variable)
+    case Delete(setName: Identifier, objectName: Identifier)
+    case Assign(setName: Identifier, insert: Insert)
+    case Check(setName: Identifier, objectName: Identifier)
     //Set operations
-    case Union(op1: Identifier, op2: Identifier)
-    case Intersection(op1: Identifier, op2: Identifier)
-    case Difference(op1: Identifier, op2: Identifier)
-    case Symmetric(op1: Identifier, op2: Identifier)
-    case Product(op1: Identifier, op2: Identifier)
+    case Union(setName1: Identifier, setName2: Identifier)
+    case Intersection(setName1: Identifier, setName2: Identifier)
+    case Difference(setName1: Identifier, setName2: Identifier)
+    case Symmetric(setName1: Identifier, setName2: Identifier)
+    case Product(setName1: Identifier, setName2: Identifier)
     //Macro
-    case Macro(op1: Identifier, op2: ArithExp)
-    case UseMacro(op1: Identifier)
+    case Macro(name: Identifier, command: ArithExp)
+    case UseMacro(name: Identifier)
     //Scope
-    case Scope(op1: Identifier, op2: Identifier, op3: ArithExp)
+    case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp)
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
@@ -40,14 +40,11 @@ object SetTheory:
       //println("currentScope('current'): " + currentScope("current"))
       val a = scopeMap(currentScope("current"))
       val inScopeMap = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"),firstSetName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-      if(!inScopeMap.contains(firstSetName)) {
+      if(!inScopeMap.contains(firstSetName))
         throw new RuntimeException("First set not found")
-      }
       val inScopeMap2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"),secondSetName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-
-      if(!inScopeMap2.contains(secondSetName)) {
+      if(!inScopeMap2.contains(secondSetName))
         throw new RuntimeException("Second set not found")
-      }
       val firstSet = inScopeMap(firstSetName).asInstanceOf[mutable.Map[String, Any]].toSet
       val secondSet = inScopeMap2(secondSetName).asInstanceOf[mutable.Map[String, Any]].toSet
       (firstSet, secondSet)
