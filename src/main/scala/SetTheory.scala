@@ -1,9 +1,25 @@
 //Cristian Trandafir
 
+import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InvokeMethod, Method, NewObject}
+import sun.security.ec.point.ProjectivePoint.Mutable
+
 import scala.annotation.tailrec
 import scala.collection.mutable
 
 object SetTheory:
+  private val currentClassName = mutable.ListBuffer[String]()
+  private val objectMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
+  //objectNames -> name in classMap
+  val classMap: mutable.Map[String, Any] = mutable.Map[String,Any]()
+  //"className" -> Map("name" -> "className"
+  //                   "constructor" -> Array[FieldAssign("fieldName",Any])
+  //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+  //                                   "public" -> Map("fieldName" -> Any)
+  //                                   "protected" -> Map("fieldName" -> Any),
+  //                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+  //                                    "private" -> Map("methodName" -> Array[ArithExp])
+  //                                    "private" -> Map("methodName" -> Array[ArithExp])
+  //                   "innerC" -> Map("className" -> class))
   private val setMap: mutable.Map[String, Any] = mutable.Map[String, Any]("main" -> mutable.Map[String, Any]())
   private val macroMap: mutable.Map[String, ArithExp] = mutable.Map[String, ArithExp]()
   //main.scope1 -> main
@@ -12,6 +28,7 @@ object SetTheory:
   private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("current" -> "main")
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
+
   enum ArithExp:
     case Variable(obj: Any)
     case Identifier(name: String)
@@ -30,6 +47,14 @@ object SetTheory:
     case UseMacro(name: Identifier)
     //Scope
     case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp)
+    //Class
+    case NewObject(className: String, variableName: String)
+    case FieldAssign(fieldName: String, obj: Any)
+    case Method(methodName: String, access: String, commands: Array[ArithExp])
+    case Constructor(commands: Array[FieldAssign])
+    case Field(fieldName: String, access: String)
+    case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method])
+    case InvokeMethod(objectName: String, methodName: String)
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
@@ -103,6 +128,43 @@ object SetTheory:
         //println("New map: " + newMap)
         resolveScopeToMain(newMap, reducedString, searchString, highestLevelMap)
       }
+
+    infix def Extends(parentName: String): Unit =
+      if(!classMap.contains(parentName))
+        throw new RuntimeException("The class you want to extend does not exist")
+      //.eval runs ClassDef which defines current class and returns its string name
+      val currentName = this.eval.asInstanceOf[String]
+      //Current class
+      val currentClassBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
+      val currentClassConstructorArray = currentClassBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
+      val currentClassFieldMap = currentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+      val currentClassMethodMap = currentClassBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+
+      //Parent class
+      val parentClassBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+      val parentClassConstructorArray = parentClassBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
+      val parentClassFieldMap = parentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+      val parentClassMethodMap = parentClassBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+
+      //The parent constructor FieldAssigns will execute first, then child constructor
+      val combinedConstructor = parentClassConstructorArray ++ currentClassConstructorArray
+      currentClassBlueprintMap("constructor") = combinedConstructor
+
+      //Prepend parent name to parent array
+      currentClassBlueprintMap("parents") = parentName +: parentClassBlueprintMap("parents").asInstanceOf[Array[String]]
+
+
+    //"className" -> Map("name" -> "className"
+    //                   "parents" -> Array[parentClassNames] immediate parent first
+    //                   "constructor" -> Array[FieldAssign("fieldName",Any])
+    //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+    //                                   "public" -> Map("fieldName" -> Any)
+    //                                   "protected" -> Map("fieldName" -> Any),
+    //                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+    //                                    "private" -> Map("methodName" -> Array[ArithExp])
+    //                                    "private" -> Map("methodName" -> Array[ArithExp])
+    //                   "innerC" -> Map("className" -> class))
+
 
     def eval: Any =
       this match{
@@ -295,11 +357,229 @@ object SetTheory:
           else{
             throw new RuntimeException("Macro doesn't exist.")
           }
+
+        //Class operations
+
+        case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method]) =>
+          if(classMap.contains(className))
+            throw new RuntimeException("Class " + className + " is already defined.")
+          currentClassName.addOne(className)
+          val methodAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
+          for(method <- methods) {
+            if(methods.length>1) {
+              for(iter <- 1 to methods.length) {
+               if(methods(iter)._1 == method._1) {
+                  throw new RuntimeException("Can't have duplicate method names")
+                }
+              }
+            }
+            methodAccessMap(method._2).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
+          }
+          val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
+          for(field <- fields) {
+            fieldAccessMap(field._2).asInstanceOf[mutable.Map[String,Any]] += (field._1 -> None)
+          }
+          classMap += (className -> mutable.Map[String, Any]("fields" -> fieldAccessMap,
+            "constructor" -> constructor.eval,
+            "methods" -> methodAccessMap,
+            "name" -> className,
+            "parents" -> Array[String]()))
+          className
+
+        //"className" -> Map("name" -> "className"
+        //                   "parents" -> Array[parentClassNames] immediate parent first
+        //                   "constructor" -> Array[FieldAssign("fieldName",Any])
+        //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+        //                                   "public" -> Map("fieldName" -> Any)
+        //                                   "protected" -> Map("fieldName" -> Any),
+        //                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+        //                                    "private" -> Map("methodName" -> Array[ArithExp])
+        //                                    "private" -> Map("methodName" -> Array[ArithExp])
+        //                   "innerC" -> Map("className" -> class))
+
+        case Field(fieldName: String, access: String) =>
+
+
+        case Constructor(commands: Array[FieldAssign]) =>
+          commands
+
+        case FieldAssign(fieldName: String, obj: Any) =>
+          val a = classMap(currentClassName.head).asInstanceOf[mutable.Map[String,Any]]
+          val b = a("fields").asInstanceOf[mutable.Map[String,Any]]
+          b(fieldName) = obj
+
+        case Method(methodName: String, access: String, commands: Array[ArithExp]) =>
+
+        case NewObject(className: String, variableName: String) =>
+          val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,Any]]
+          val classConstructorArray = classBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
+          //Instantiate object by copying its class blueprint
+          //Will need to rerun this later
+          val objectM: mutable.Map[String, Any] = classBlueprintMap.clone()
+          objectMap += (variableName -> objectM)
+          val objectFieldMap = classBlueprintMap("fields").asInstanceOf[mutable.Map[String,Any]]
+          val objectPrivateFieldMap = objectFieldMap("private").asInstanceOf[mutable.Map[String,Any]]
+          val objectPublicFieldMap = objectFieldMap("public").asInstanceOf[mutable.Map[String,Any]]
+          val objectProtectedFieldMap = objectFieldMap("protected").asInstanceOf[mutable.Map[String,Any]]
+          val classParentArray = classBlueprintMap("parents").asInstanceOf[Array[String]]
+          //If there is no parent class, simply run the commands in the current constructor
+          if(classParentArray.isEmpty) {
+            for (commands <- classConstructorArray) {
+              if(!objectPrivateFieldMap.contains(commands._1)) {
+                if(!objectPublicFieldMap.contains(commands._1)) {
+                  if(!objectProtectedFieldMap.contains(commands._1)) {
+                    throw new RuntimeException("Field does not exist.")
+                  }
+                  else {
+                    objectProtectedFieldMap(commands._1) = commands._2
+                  }
+                }
+                else {
+                  objectPublicFieldMap(commands._1) = commands._2
+                }
+              }
+              else {
+                objectPrivateFieldMap(commands._1) = commands._2
+              }
+            }
+          }
+          //Else parent class exists
+          else {
+            //Reverse iterate through parent classes starting from oldest ancestor
+            val reverseIterator: Iterator[String] = classParentArray.reverseIterator
+            //For each parent class
+            reverseIterator.foreach(parentName =>
+              val currentClassBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+              val currentClassConstructorArray = currentClassBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
+              //Parent class's fields
+              val currentClassFieldMap = currentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+              val classPrivateFieldMap = currentClassFieldMap("private").asInstanceOf[mutable.Map[String,Any]]
+              val classPublicFieldMap = currentClassFieldMap("public").asInstanceOf[mutable.Map[String,Any]]
+              val classProtectedFieldMap = currentClassFieldMap("protected").asInstanceOf[mutable.Map[String,Any]]
+              val classParentArray = classBlueprintMap("parents").asInstanceOf[Array[String]]
+              //This is the child class's map; add all of its parents fields into it
+              for(field <- classPrivateFieldMap) {
+                //This implementation causes shadowing of fields in parent classes.
+                if(objectPrivateFieldMap.contains(field._1)) {
+                  //Need to check that current class has this private field defined; else runtime error.
+                  if(classPrivateFieldMap.contains(field._1))
+                    objectPrivateFieldMap(field._1) = field._2
+                  else
+                    throw new RuntimeException("Error, you tried to access a private parent field.")
+                } else
+                  objectPrivateFieldMap += (field._1 -> field._2)
+              }
+              for(field <- classPublicFieldMap) {
+                if (objectPublicFieldMap.contains(field._1))
+                  objectPublicFieldMap(field._1) = field._2
+                else
+                  objectPublicFieldMap += (field._1 -> field._2)
+              }
+              for(field <- classProtectedFieldMap) {
+                if(objectProtectedFieldMap.contains(field._1))
+                  objectProtectedFieldMap(field._1) = field._2
+                else
+                  objectProtectedFieldMap += (field._1 -> field._2)
+              }
+              //Then run current constructor;
+              for (commands <- classConstructorArray) {
+                if(!objectPrivateFieldMap.contains(commands._1)) {
+                  if(!objectPublicFieldMap.contains(commands._1)) {
+                    if(!objectProtectedFieldMap.contains(commands._1)) {
+                      throw new RuntimeException("Field does not exist.")
+                    }
+                    else {
+                      objectProtectedFieldMap(commands._1) = commands._2
+                    }
+                  }
+                  else {
+                    objectPublicFieldMap(commands._1) = commands._2
+                  }
+                }
+                else {
+                  objectPrivateFieldMap(commands._1) = commands._2
+                }
+              }
+              //Then iterate to next oldest parent class
+            )
+          }
+
+        case InvokeMethod(objectName: String, methodName: String) =>
+          if(!objectMap.contains(objectName))
+            throw new RuntimeException("Object does not exist")
+          val objectBlueprintMap = objectMap(objectName).asInstanceOf[mutable.Map[String,Any]]
+          val objectMethodMap = objectBlueprintMap("methods").asInstanceOf[mutable.Map[String,Any]]
+          val objectPrivateMethodMap = objectMethodMap("private").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+          val objectPublicMethodMap = objectMethodMap("public").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+          val objectProtectedMethodMap = objectMethodMap("protected").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+          if(!checkCurrentClassForMethod(objectPublicMethodMap, methodName)) {
+            if(!checkCurrentClassForMethod(objectPrivateMethodMap, methodName)) {
+              if(!checkCurrentClassForMethod(objectProtectedMethodMap, methodName)) {
+                //Not found in current class scope, start checking parents
+                val objectParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
+                if(!objectParentArray.isEmpty) {
+                  if(!recurseClassHierarchy(objectParentArray(0), methodName))
+                    throw new RuntimeException("Method not found")
+                }
+                //Current class has no parents
+                else {
+                  throw new RuntimeException("Method not found")
+                }
+              }
+            }
+          }
+          //If made it here, return global variable of last method
+          //Also update to make work for fields
       }
+
+    private def checkCurrentClassForMethod(methodMap: mutable.Map[String, Array[ArithExp]], methodName: String) : Boolean =
+      for(method <- methodMap) {
+        if(method._1 == methodName) {
+          for(commands <- method._2) {
+            commands.eval
+            return true
+          }
+        }
+      }
+      false
+
+    private def recurseClassHierarchy(className: String, methodName: String): Boolean =
+      val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,Any]]
+      val classMethodMap = classBlueprintMap("methods").asInstanceOf[mutable.Map[String,Any]]
+      val classPublicMethodMap = classMethodMap("public").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+      val classProtectedMethodMap = classMethodMap("protected").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+      if(!checkCurrentClassForMethod(classPublicMethodMap, methodName)) {
+        if(!checkCurrentClassForMethod(classProtectedMethodMap, methodName)) {
+          val classParentArray = classBlueprintMap("parents").asInstanceOf[Array[String]]
+          if(!classParentArray.isEmpty) {
+            recurseClassHierarchy(classParentArray(0), methodName)
+          }
+          //Current class has no parents
+          else {
+            throw new RuntimeException("Method not found")
+          }
+        }
+      }
+      true
 
 
   @main def createSetTheoryInputSession(): Unit =
     import ArithExp.*
+    ClassDef("TestClass",
+              Array[Field](Field("a","private"), Field("b", "private"), Field("c", "private")),
+              Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+              Array[Method](Method("method1", "public", Array[ArithExp](Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1))))))).eval
+    println(classMap)
+    NewObject("TestClass", "randomName1").eval
+    println(objectMap)
+    InvokeMethod("randomName1","method1").eval
+    println(setMap)
+    ClassDef("TestClass2",
+              Array[Field](Field("a","private"), Field("b", "private"), Field("c", "private")),
+              Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+              Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set10"), Insert(Identifier("var2"), Variable(1))))))) Extends "TestClass"
+    NewObject("TestClass2", "randomName2").eval
+    //InvokeMethod("randomName2","method1").eval
 /*
     Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1))).eval
     Assign(Identifier("set20"), Insert(Identifier("var2"), Variable(1))).eval

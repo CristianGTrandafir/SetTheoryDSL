@@ -3,9 +3,71 @@
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import SetTheory.ArithExp.*
+import SetTheory.ArithExp
 
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
+
+///////////////////////////////////////////////////////////////////////////////HW2 Tests
+
+//Note that I omitted the "shouldBe" check for most of these tests because I didn't know what to compare.
+//You can do: println(setMap), println(objectMap), println(classMap) in main for better diagnostic information.
+//The tests will still fail if an error is thrown - I modeled the test blocks to show core functionality this way without "shouldBe."
+
+  //Test 8
+  behavior of "my first language for set theory operations 8"
+
+  it should "define a new class, define a class that extends the first class, then instantiate an object" in {
+    ClassDef("TestClass",
+      Array[Field](
+        Field("a","private"), Field("b", "private"), Field("c", "private")
+      ),
+      Constructor(Array[FieldAssign](
+        FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))
+      ),
+      Array[Method](
+        Method(
+          "method1", "public", Array[ArithExp](
+            Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))
+          )
+        )
+    ).eval
+
+    NewObject("TestClass", "randomName1").eval
+  }
+  //Test 9
+  behavior of "my first language for set theory operations 9"
+
+  it should "invoke method1 on object randomName1" in {
+    InvokeMethod("randomName1","method1").eval
+  }
+  
+  //Test 10
+  behavior of "my first language for set theory operations 10"
+
+  it should "extend a class" in {
+    ClassDef("TestClass2",
+      Array[Field](Field("a","private"), Field("b", "private"), Field("c", "private")),
+      Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set10"), Insert(Identifier("var2"), Variable(1))))))
+    ) Extends "TestClass"
+    NewObject("TestClass2", "randomName2").eval
+  }
+  //Test 11
+  behavior of "my first language for set theory operations 11"
+
+  it should "invoke a method in a parent class" in {
+    InvokeMethod("randomName2","method1").eval
+  }
+  //Test 12
+  behavior of "my first language for set theory operations 12"
+
+  it should "create a set and insert objects into it" in {
+    Assign(Identifier("someSetName"), Insert(Identifier("var"), Variable(1))).eval
+    Check(Identifier("someSetName"), Identifier("var")).eval shouldBe "Set " + "someSetName" + " does contain " + "var" + "."
+  }
+
+//////////////////////////////////////////////////////////////////////////////////HW1 Tests
 
   //Test 1
   behavior of "my first language for set theory operations 1"
@@ -26,7 +88,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "my first language for set theory operations 3"
 
   it should "create a macro and use it" in {
-    Macro (Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))).eval
+    Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))).eval
     UseMacro(Identifier("testMacro")).eval
     Check(Identifier("someSetName2"), Identifier("var2")).eval shouldBe "Set " + "someSetName2" + " does contain " + "var2" + "."
   }
