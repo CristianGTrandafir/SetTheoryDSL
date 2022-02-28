@@ -1,6 +1,8 @@
 # CS474Homework1
 Cristian Trandafir
 
+//////////////////////////////////////////////////////////////////////////Homework1
+
 ////////////////*How to set up*///////////////
 
 Type "import SetTheory.ArithExp.*" at the top of your program.
@@ -127,3 +129,137 @@ If a user uses Delete with 2 parameters on a scope, then they would inadvertentl
 
 One last issue I ran into with my code was that I could never figure out how to return a specific type from case statements.
 This resulted in my code being bloated with .asInstanceOf[Type] statements.
+
+////////////////////////////////////////////////////////////////////////Homework 2
+
+////////////////*How to set up*///////////////
+
+New for Homework 2:
+
+Include the import "SetTheory.ArithExp" at the top of your program. 
+The previous one was only "SetTheory.ArithExp.*" which only imported the case statements like Identifier().
+Adding this import is necessary because you will need to create Arrays of ArithExp, which wasn't possible with only the previous import.
+
+
+////////////////*How the commands work*///////////////
+
+Field has 2 parameters.
+The first is a String for the name of the class field you want to define.
+The second is a String for the access modifier of the field you want to define - "public"/"private"/"protected".
+
+Method has 3 parameters.
+The first is a String for the name of the method you want to define.
+The second is a String for the access modifier of the method you want to define - "public"/"private"/"protected".
+The third is an Array of ArithExp - you can input an arbitrary amount of commands from HW1 into the array to define the method body.
+
+FieldAssign has 2 parameters.
+The first is a String that specifies the field name that you want to find.
+The second is any object you want to assign to that field.
+
+Constructor has 1 parameter.
+It is an Array of FieldAssigns - you can input an arbitrary amount of FieldAssigns into the constructor body that will execute when NewObject is called.
+
+NewObject has 2 parameters.
+The first is a String for the class name that you want to instantiate.
+The second is a String that functions as the object name.
+Instantiated objects are stored in the objectMap variable.
+
+InvokeMethod has 2 parameters.
+The first is a String for the object whose method you want to invoke.
+The second is a String for the method name that you want to invoke.
+
+ClassDef has 5 parameters.
+The first is a String for the name of the class you want to define.
+Next is an Array of Fields that will define all the class fields.
+Next is a Constructor that will contain an Array of FieldAssigns to execute when NewObject is called on the class.
+Next is an Array of Methods that will define all the class methods.
+Finally, there is ClassDef parameter for defining an arbitrary amount of inner nested classes.
+Simply leave any other variable like a 0 or String in the final parameter to stop the nesting at any point.
+Class definitions are stored in the classMap variable.
+
+Here is an example of a well-formed ClassDef statement:
+
+    ClassDef("TestClass",
+        Array[Field](
+            Field("a","private"), Field("b", "public"), Field("c", "protected")
+            ),
+        Constructor(Array[FieldAssign](
+            FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))
+            ),
+        Array[Method](
+            Method("method1", "public", Array[ArithExp](
+                Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), 
+                Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))
+                ),
+            Method("method3", "private", Array[ArithExp](
+                Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1))))
+                )
+            ),
+        0).eval
+
+Extends is an infix method.
+The first parameter it takes is a new ClassDef for the class you want to define.
+The second parameter is a String for the class that you want to inherit from.
+
+////////////////*How the Class commands are implemented*///////////////
+
+    "className" -> Map("name" -> "className"
+
+                   "parents" -> Array[parentClassNames] immediate parent first
+
+                   "constructor" -> Array[FieldAssign("fieldName",Any])
+
+                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+
+                                   "public" -> Map("fieldName" -> Any)
+
+                                   "protected" -> Map("fieldName" -> Any),
+
+                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+
+                                    "private" -> Map("methodName" -> Array[ArithExp])
+
+                                    "private" -> Map("methodName" -> Array[ArithExp])
+
+                   "nested" -> Map("className" -> class)) //(this data structure repeats in class)
+
+This is the data structure that classMap stores. 
+It is created inside of ClassDef. 
+ClassDef calls the helper method recurseAddClassToMap that recursively creates this data structure.
+It is necessary for evaluating nested ClassDef calls which add an arbitrary amount of nested classes.
+
+Field, Method, and FieldAssign are used to structure the user's input data. 
+They don't return anything by themselves; it was simply easier to carry out the calculations inside of ClassDef.
+Constructor only returns the Array of FieldAssigns.
+
+NewObject and InvokeMethod use the "parents" Array above as a stand-in for the vtable.
+The "parents" array simply stores Strings that keep track of the current class's parents.
+For example: ["parent", "grandparent","great-grandparent"].
+
+NewObject uses a ReverseIterator to start at the oldest ancestor, copy the ancestor's fields into the current object, and then execute the ancestor's constructor.
+After this happens, the second oldest ancestor repeats the same process and the process repeats for all of the current class's parents.
+There is a check to make sure that no ancestor constructor accesses its own ancestor's private methods.
+
+InvokeMethod uses the helper method recurseClassHierarchy to start from the current class and check for the method name upwards on the class hierarchy.
+Once the method is found (private ancestor methods are ignored), its ArithExp commands are executed.
+
+NewObject and InvokeMethod implement field and method overriding, respectively. 
+This is done implicitly of course, the user gets no error message.
+If Ancestor A defines Field B and Method C and Child D defines Field B and Method C, the ancestor field and method are shadowed in regards to a child object.
+
+////////////////*Limitations*///////////////
+
+While classes can be indefinitely nested, I did not implement multiple nested classes in one class.
+This could be done by passing in an Array of ClassDefs and calling recurseAddClassToMap on each element.
+I did not implement this because I don't think the specification required it.
+I only implemented indefinite nesting.
+
+I limited Constructor to only execute FieldAssigns. 
+I also limited Method to only execute the HW1 commands. 
+This limits the flexibility of my implementation compared to normal programming languages, but I think it also makes it easier to keep track of commands.
+
+One difficulty I had in coding this was adding varargs to case statements - it kept giving me errors and I wasn't sure how to fix it.
+This resulted in ClassDef having ugly Array[] syntax so I could still support arbitrary parameters.
+
+One note for the grader - I made setMap, objectMap, and classMap public so I could reference them from the Scalatests.
+I made them public so I could access the objects and classes and test their fields with the shouldBe command.

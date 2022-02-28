@@ -4,68 +4,13 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import SetTheory.ArithExp.*
 import SetTheory.ArithExp
-
+import scala.collection.mutable
+import SetTheory.classMap
+import SetTheory.objectMap
+import SetTheory.setMap
+//I made these 3 data structures public so I could complete the testing cases.
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
-
-///////////////////////////////////////////////////////////////////////////////HW2 Tests
-
-//Note that I omitted the "shouldBe" check for most of these tests because I didn't know what to compare.
-//You can do: println(setMap), println(objectMap), println(classMap) in main for better diagnostic information.
-//The tests will still fail if an error is thrown - I modeled the test blocks to show core functionality this way without "shouldBe."
-
-  //Test 8
-  behavior of "my first language for set theory operations 8"
-
-  it should "define a new class, define a class that extends the first class, then instantiate an object" in {
-    ClassDef("TestClass",
-      Array[Field](
-        Field("a","private"), Field("b", "private"), Field("c", "private")
-      ),
-      Constructor(Array[FieldAssign](
-        FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))
-      ),
-      Array[Method](
-        Method(
-          "method1", "public", Array[ArithExp](
-            Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))
-          )
-        )
-    ).eval
-
-    NewObject("TestClass", "randomName1").eval
-  }
-  //Test 9
-  behavior of "my first language for set theory operations 9"
-
-  it should "invoke method1 on object randomName1" in {
-    InvokeMethod("randomName1","method1").eval
-  }
-  
-  //Test 10
-  behavior of "my first language for set theory operations 10"
-
-  it should "extend a class" in {
-    ClassDef("TestClass2",
-      Array[Field](Field("a","private"), Field("b", "private"), Field("c", "private")),
-      Constructor(Array[FieldAssign](FieldAssign("c", 5))),
-      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set10"), Insert(Identifier("var2"), Variable(1))))))
-    ) Extends "TestClass"
-    NewObject("TestClass2", "randomName2").eval
-  }
-  //Test 11
-  behavior of "my first language for set theory operations 11"
-
-  it should "invoke a method in a parent class" in {
-    InvokeMethod("randomName2","method1").eval
-  }
-  //Test 12
-  behavior of "my first language for set theory operations 12"
-
-  it should "create a set and insert objects into it" in {
-    Assign(Identifier("someSetName"), Insert(Identifier("var"), Variable(1))).eval
-    Check(Identifier("someSetName"), Identifier("var")).eval shouldBe "Set " + "someSetName" + " does contain " + "var" + "."
-  }
 
 //////////////////////////////////////////////////////////////////////////////////HW1 Tests
 
@@ -144,5 +89,94 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300"))).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
     //newScope30 is in the parent scope of newScope40
     Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200"))).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////HW2 Tests
+
+  //Test 8
+  behavior of "Extends"
+
+  it should "define a new class, define a class that extends the first class, then instantiate an object" in {
+
+    ClassDef("TestClass",
+      Array[Field](Field("a","private"), Field("b", "public"), Field("c", "protected")),
+      Constructor(Array[FieldAssign](FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))),
+      Array[Method](Method("method1", "public", Array[ArithExp](Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))),
+        Method("method3", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0).eval
+
+    ClassDef("TestClass2",
+      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+      Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0) Extends "TestClass"
+
+    NewObject("TestClass2", "randomName2").eval
+
+    objectMap.contains("randomName2") shouldBe true
+    classMap.contains("TestClass") shouldBe true
+    classMap.contains("TestClass2") shouldBe true
+  }
+
+  //Test 9
+  behavior of "invoking public parent method"
+
+  it should "invoke TestClass inherited method on TestClass2 object" in {
+    InvokeMethod("randomName2","method1").eval
+    Check(Identifier("set15"), Identifier("var15")).eval shouldBe "Set set15 does contain var15."
+  }
+
+  //Test 10
+  behavior of "invoking private parent method"
+
+  it should "throw a RuntimeException" in {
+    a [RuntimeException] should be thrownBy InvokeMethod("randomName2","method3").eval
+  }
+
+  //Test 11
+  behavior of "invoking private parent field"
+
+  it should "throw a RuntimeException" in {
+    ClassDef("TestClass3",
+      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+      //Accesses private field "a" in TestClass
+      Constructor(Array[FieldAssign](FieldAssign("a", 5))),
+      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0) Extends "TestClass"
+    a [RuntimeException] should be thrownBy NewObject("TestClass3", "randomName3").eval
+  }
+
+  //Test 12
+  behavior of "accessing public parent field"
+
+  it should "set field b to 5000 in parent class" in {
+    ClassDef("TestClass6",
+      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+      //Accesses public field "b" in TestClass
+      Constructor(Array[FieldAssign](FieldAssign("b", 5000))),
+      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0) Extends "TestClass"
+    NewObject("TestClass6", "object6").eval
+    //object6's field b should be 5000
+    objectMap("object6").asInstanceOf[mutable.Map[String, mutable.Map[String,mutable.Map[String,Int]]]]("fields")("public")("b") shouldBe 5000
+  }
+
+  //Test 13
+  behavior of "Nested classes"
+
+  it should "create a nested class" in {
+    ClassDef("TestClass4",
+      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+      //Accesses private field a in TestClass
+      Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      ClassDef("TestClass5",
+        Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+        //Accesses private field a in TestClass
+        Constructor(Array[FieldAssign](FieldAssign("a", 5))),
+        Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+        0)).eval
+    //Check if TestClass4 has reference to TestClass5 inside of it
+    classMap("TestClass4").asInstanceOf[mutable.Map[String,Any]]("nested").asInstanceOf[(String,Any)]._1 shouldBe "TestClass5"
   }
 }
