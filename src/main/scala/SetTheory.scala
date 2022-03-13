@@ -1,5 +1,6 @@
 //Cristian Trandafir
 
+import SetTheory.AccessModifier.{Private, Protected, Public}
 import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InvokeMethod, Method, NewObject}
 import sun.security.ec.point.ProjectivePoint.Mutable
 
@@ -349,6 +350,14 @@ object SetTheory:
         case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any) =>
           if(classMap.contains(className))
             throw new RuntimeException("Class " + className + " is already defined.")
+          for(method <- methods) {
+            if(method._2.eval == "abstract") {
+              val arithArray = method._3.asInstanceOf[Array[ArithExp]]
+              if (arithArray.isEmpty){
+                throw new RuntimeException("Cannot define abstract method in concrete class.")
+              }
+            }
+          }
           classMap += recurseAddClassToMap(className, fields, constructor, methods, nestedC, nestedI)
           className
 
@@ -363,18 +372,25 @@ object SetTheory:
 
         case NewObject(className: String, variableName: String) =>
           //Instantiate object by copying its class blueprint
-          val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,Any]]
-          val objectM = classBlueprintMap.clone()
-          objectMap += (variableName -> objectM)
+          val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,mutable.Map[String,mutable.Map[String,Any]]]]
+          //"className" -> Map( "fields" -> Map("private" -> Map("fieldName" -> Any)
+          //                                   "public" -> Map("fieldName" -> Any)
+          //                                   "protected" -> Map("fieldName" -> Any)
+          val objectBlueprintMap = classBlueprintMap.clone() //Doesn't clone nested maps
+          val objectFieldMap = classBlueprintMap("fields").clone()
+          objectBlueprintMap("fields") = objectFieldMap
+          val objectPrivateFieldMap = objectFieldMap("private").clone()
+          val objectPublicFieldMap = objectFieldMap("public").clone()
+          val objectProtectedFieldMap = objectFieldMap("protected").clone()
+          objectBlueprintMap("fields")("private") = objectPrivateFieldMap
+          objectBlueprintMap("fields")("public") = objectPublicFieldMap
+          objectBlueprintMap("fields")("protected") = objectProtectedFieldMap
+          objectMap += (variableName -> objectBlueprintMap)
           //Necessary fields
           val classConstructorArray = classBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
-          val objectFieldMap = objectM("fields").asInstanceOf[mutable.Map[String,Any]]
-          val classPrivateFieldMap = classBlueprintMap("fields").asInstanceOf[mutable.Map[String,Any]]("private").asInstanceOf[mutable.Map[String,Any]]
-          val objectPrivateFieldMap = objectFieldMap("private").asInstanceOf[mutable.Map[String,Any]]
-          val objectPublicFieldMap = objectFieldMap("public").asInstanceOf[mutable.Map[String,Any]]
-          val objectProtectedFieldMap = objectFieldMap("protected").asInstanceOf[mutable.Map[String,Any]]
-          val classParentArray = objectM("parents").asInstanceOf[Array[String]]
-          val objectAbstractMap = objectM("methods").asInstanceOf[mutable.Map[String,Any]]("abstract").asInstanceOf[mutable.Map[String,Any]]
+          val classPrivateFieldMap = classBlueprintMap("fields")("private")
+          val classParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
+          val objectAbstractMap = objectBlueprintMap("methods")("abstract")
           //If there is no parent class, simply run the commands in the current constructor
           if(classParentArray.isEmpty) {
             for (commands <- classConstructorArray) {
@@ -402,31 +418,31 @@ object SetTheory:
               val currentClassConstructorArray = currentClassBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
               //Parent class's fields
               val currentClassFieldMap = currentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
-              val classPrivateFieldMap = currentClassFieldMap("private")
-              val classPublicFieldMap = currentClassFieldMap("public")
-              val classProtectedFieldMap = currentClassFieldMap("protected")
-              //This is the child class's map; add all of its parent's fields into it
-              for(field <- classPrivateFieldMap) {
-                //This implementation causes shadowing of fields in parent classes.
-                if(objectPrivateFieldMap.contains(field._1))
+              val currentClassPrivateFieldMap = currentClassFieldMap("private")
+              val currentClassPublicFieldMap = currentClassFieldMap("public")
+              val currentClassProtectedFieldMap = currentClassFieldMap("protected")
+              //This is the child class's map; add all of its parent's public and protected fields into it
+              //This implementation causes shadowing of fields in parent classes.
+              for(field <- currentClassPrivateFieldMap) {
+                if (currentClassPrivateFieldMap.contains(field._1))
                   objectPrivateFieldMap(field._1) = field._2
                 else
                   objectPrivateFieldMap += (field._1 -> field._2)
               }
-              for(field <- classPublicFieldMap) {
+              for(field <- currentClassPublicFieldMap) {
                 if (objectPublicFieldMap.contains(field._1))
                   objectPublicFieldMap(field._1) = field._2
                 else
                   objectPublicFieldMap += (field._1 -> field._2)
               }
-              for(field <- classProtectedFieldMap) {
+              for(field <- currentClassProtectedFieldMap) {
                 if(objectProtectedFieldMap.contains(field._1))
                   objectProtectedFieldMap(field._1) = field._2
                 else
                   objectProtectedFieldMap += (field._1 -> field._2)
               }
               //Then run current constructor;
-              for (commands <- classConstructorArray) {
+              for (commands <- currentClassConstructorArray) {
                 if(!objectPrivateFieldMap.contains(commands._1)) {
                   if(!objectPublicFieldMap.contains(commands._1)) {
                     if(!objectProtectedFieldMap.contains(commands._1))
@@ -437,30 +453,42 @@ object SetTheory:
                   else
                     objectPublicFieldMap(commands._1) = commands._2
                 }
-                //Private method special case
+                //Check if current class defines this private field. If not, error.
                 else {
-                  if(objectPrivateFieldMap.contains(commands._1))
+                  if(currentClassPrivateFieldMap.contains(commands._1))
                     objectPrivateFieldMap(commands._1) = commands._2
                   else
-                    throw new RuntimeException("Tried to access private parent method")
+                    throw new RuntimeException("Tried to access private parent field")
                 }
               }
               //Then iterate to next oldest parent class
             )
+            //Child class
             for (commands <- classConstructorArray) {
               if(!objectPrivateFieldMap.contains(commands._1)) {
                 if(!objectPublicFieldMap.contains(commands._1)) {
-                  if(!objectProtectedFieldMap.contains(commands._1))
+                  if(!objectProtectedFieldMap.contains(commands._1)) {
                     throw new RuntimeException("Field does not exist.")
+                  }
                   else
                     objectProtectedFieldMap(commands._1) = commands._2
                 }
                 else
                   objectPublicFieldMap(commands._1) = commands._2
               }
+              //Check if child object has private field in class def. If not, illegal access to private parent field.
               else
-                throw new RuntimeException("Tried to access private parent method")
+                if(classPrivateFieldMap.contains(commands._1))
+                  objectPrivateFieldMap(commands._1) = commands._2
+                else
+                  throw new RuntimeException("Tried to access private parent field")
             }
+          }
+          for (field <- objectPrivateFieldMap) {
+            println(field._1)
+          }
+          for (field <- classPrivateFieldMap) {
+            println(field._1)
           }
           for (method <- objectAbstractMap) {
             if(method._2.asInstanceOf[Array[ArithExp]].isEmpty)
@@ -500,6 +528,14 @@ object SetTheory:
         case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any) =>
           if(classMap.contains(className))
             throw new RuntimeException("Class " + className + " is already defined.")
+          for(method <- methods) {
+            if(method._2.eval == "abstract") {
+              val arithArray = method._3.asInstanceOf[Array[ArithExp]]
+              if (!arithArray.isEmpty){
+                throw new RuntimeException("Cannot define abstract method with body.")
+              }
+            }
+          }
           classMap += recurseAddClassToMap(className, fields, constructor, methods, nestedC, nestedI)
           className
 
@@ -523,12 +559,6 @@ object SetTheory:
         }
       }
       for(method <- methods) {
-        if(method._2.eval == "abstract") {
-          val arithArray = method._3.asInstanceOf[Array[ArithExp]]
-          if (!arithArray.isEmpty){
-            throw new RuntimeException("Cannot define abstract method with body.")
-          }
-        }
         methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
       }
       val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())

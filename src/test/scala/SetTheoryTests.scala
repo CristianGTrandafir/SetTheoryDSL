@@ -140,7 +140,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   it should "throw a RuntimeException" in {
     ClassDef("TestClass3",
       Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-      //Accesses private() field "a" in TestClass
+      //Accesses private field "a" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("a", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       0,0) Extends "TestClass"
@@ -216,6 +216,43 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
       0,0).eval
     a [RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
+  }
+
+  //Test 16
+  behavior of "Concrete Class Defining Abstract Method With No Body"
+
+  it should "throw an error when attempted to be defined" in {
+
+    a [RuntimeException] should be thrownBy ClassDef("TestClassD",
+                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                            Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+                                            //Abstract method with no body
+                                            Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
+                                            0,0).eval
+  }
+
+  //Test 17
+  behavior of "Abstract Class overriding abstract method"
+
+  it should "allow class that overrides to be instantiated" in {
+    AbstractClassDef("TestClassC",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+      //Abstract method with no body
+      Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp]())),
+      0,0).eval
+
+    ClassDef("ConcreteImplementer",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      //Overridden abstract method
+      Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setC"), Insert(Identifier("var20"), Variable(1)))))),
+      0,0) Extends "TestClassC"
+
+    NewObject("ConcreteImplementer", "ConcreteVar").eval
+    InvokeMethod("ConcreteVar","abstractMethod").eval
+
+    Check(Identifier("setC"), Identifier("var20")).eval shouldBe "Set setC does contain var20."
   }
 
 }
