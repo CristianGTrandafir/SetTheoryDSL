@@ -160,12 +160,20 @@ object SetTheory:
       val currentName = this.eval.asInstanceOf[String]
       if(currentName == parentName)
         throw new RuntimeException("Cannot inherit from own class.")
-      val currentClassBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
-      val parentClassBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
-
       //Prepend parent name to parent array
-      currentClassBlueprintMap("parents") = parentName +: parentClassBlueprintMap("parents").asInstanceOf[Array[String]]
-
+      val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
+      val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+      currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
+      //Override parent's abstract methods
+      val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+      val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+      for(method <- parentAbstractMap)
+        //Add any unimplemented methods from parent class into child class
+        if(!currentAbstractMap.contains(method._1))
+          currentAbstractMap += (method._1 -> method._2)
+      for(method <- currentAbstractMap)
+        if(!parentAbstractMap.contains(method._1))
+          throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
 
     def eval: Any =
       this match{
@@ -373,10 +381,8 @@ object SetTheory:
         case NewObject(className: String, variableName: String) =>
           //Instantiate object by copying its class blueprint
           val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,mutable.Map[String,mutable.Map[String,Any]]]]
-          //"className" -> Map( "fields" -> Map("private" -> Map("fieldName" -> Any)
-          //                                   "public" -> Map("fieldName" -> Any)
-          //                                   "protected" -> Map("fieldName" -> Any)
-          val objectBlueprintMap = classBlueprintMap.clone() //Doesn't clone nested maps
+          //clone() is shallow copy so this sequence deep copies the class fields for each object instantiation.
+          val objectBlueprintMap = classBlueprintMap.clone()
           val objectFieldMap = classBlueprintMap("fields").clone()
           objectBlueprintMap("fields") = objectFieldMap
           val objectPrivateFieldMap = objectFieldMap("private").clone()
@@ -484,12 +490,6 @@ object SetTheory:
                   throw new RuntimeException("Tried to access private parent field")
             }
           }
-          for (field <- objectPrivateFieldMap) {
-            println(field._1)
-          }
-          for (field <- classPrivateFieldMap) {
-            println(field._1)
-          }
           for (method <- objectAbstractMap) {
             if(method._2.asInstanceOf[Array[ArithExp]].isEmpty)
               throw new RuntimeException("Can't instantiate class that doesn't implement all abstract methods")
@@ -505,18 +505,21 @@ object SetTheory:
           val objectPrivateMethodMap = objectMethodMap("private").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
           val objectPublicMethodMap = objectMethodMap("public").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
           val objectProtectedMethodMap = objectMethodMap("protected").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-          if(!checkCurrentClassForMethod(objectPublicMethodMap, methodName)) {
-            if(!checkCurrentClassForMethod(objectPrivateMethodMap, methodName)) {
-              if(!checkCurrentClassForMethod(objectProtectedMethodMap, methodName)) {
-                //Not found in current class scope, start checking parents
-                val objectParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
-                if(!objectParentArray.isEmpty) {
-                  if(!recurseClassHierarchy(objectParentArray(0), methodName))
+          val objectAbstractMethodMap = objectMethodMap("abstract").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
+          if(!checkCurrentClassForMethod(objectAbstractMethodMap, methodName)){
+            if (!checkCurrentClassForMethod(objectPublicMethodMap, methodName)) {
+              if (!checkCurrentClassForMethod(objectPrivateMethodMap, methodName)) {
+                if (!checkCurrentClassForMethod(objectProtectedMethodMap, methodName)) {
+                  //Not found in current class scope, start checking parents
+                  val objectParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
+                  if (!objectParentArray.isEmpty) {
+                    if (!recurseClassHierarchy(objectParentArray(0), methodName))
+                      throw new RuntimeException("Method not found")
+                  }
+                  //Current class has no parents
+                  else {
                     throw new RuntimeException("Method not found")
-                }
-                //Current class has no parents
-                else {
-                  throw new RuntimeException("Method not found")
+                  }
                 }
               }
             }
