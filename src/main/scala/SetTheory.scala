@@ -7,18 +7,31 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object SetTheory:
+  val interfaceMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
+  //"interface" -> Map("name" -> "interfaceName"
+  //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+  //                                   "public" -> Map("fieldName" -> Any)
+  //                                   "protected" -> Map("fieldName" -> Any)
+  //                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+  //                                    "private" -> Map("methodName" -> Array[ArithExp])
+  //                                    "private" -> Map("methodName" -> Array[ArithExp])
+  //                                    "abstract" -> Map("methodName" -> Array[ArithExp])
+  //                   "innerC" -> Map("className" -> class)
+  //                   "innerI" -> Map("interfaceName" -> interface)
   val objectMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
-  //objectNames -> name in classMap
+  //objectName -> objectInstantiation
   val classMap: mutable.Map[String, Any] = mutable.Map[String,Any]()
   //"className" -> Map("name" -> "className"
   //                   "constructor" -> Array[FieldAssign("fieldName",Any])
   //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
   //                                   "public" -> Map("fieldName" -> Any)
-  //                                   "protected" -> Map("fieldName" -> Any),
+  //                                   "protected" -> Map("fieldName" -> Any)
   //                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
   //                                    "private" -> Map("methodName" -> Array[ArithExp])
-  //                                    "private" -> Map("methodName" -> Array[ArithExp])
-  //                   "innerC" -> Map("className" -> class))
+  //                                    "public" -> Map("methodName" -> Array[ArithExp])
+  //                                    "abstract" -> Map("methodName" -> Array[ArithExp])
+  //                   "innerC" -> Map("className" -> class)
+  //                   "innerI" -> Map("interfaceName" -> interface)
   val setMap: mutable.Map[String, Any] = mutable.Map[String, Any]("main" -> mutable.Map[String, Any]())
   private val macroMap: mutable.Map[String, ArithExp] = mutable.Map[String, ArithExp]()
   //main.scope1 -> main
@@ -27,6 +40,24 @@ object SetTheory:
   private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("current" -> "main")
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
+
+  enum AccessModifier:
+    case Private()
+    case Public()
+    case Protected()
+    case Abstract()
+
+    def eval: String =
+      this match {
+        case Private() =>
+          "private"
+        case Public() =>
+          "public"
+        case Protected() =>
+          "protected"
+        case Abstract() =>
+          "abstract"
+      }
 
   enum ArithExp:
     case Variable(obj: Any)
@@ -49,19 +80,19 @@ object SetTheory:
     //Class
     case NewObject(className: String, variableName: String)
     case FieldAssign(fieldName: String, obj: Any)
-    case Method(methodName: String, access: String, commands: Array[ArithExp])
+    case Method(methodName: String, access: AccessModifier, commands: Array[ArithExp])
     case Constructor(commands: Array[FieldAssign])
-    case Field(fieldName: String, access: String)
+    case Field(fieldName: String, access: AccessModifier)
     case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nested: Any)
     case InvokeMethod(objectName: String, methodName: String)
+    //Abstract Classes and Interfaces
+    case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nested: Any)
+    case InterfaceDecl(interfaceName: String, fields: Array[Field], methods: Array[Method], nested: Any)
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
       val firstSetName = setName1.eval.asInstanceOf[String]
       val secondSetName = setName2.eval.asInstanceOf[String]
-      //println("setMap:" + setMap)
-      //println("currentMap: " + currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-      //println("currentScope('current'): " + currentScope("current"))
       val a = scopeMap(currentScope("current"))
       val inScopeMap = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"),firstSetName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
       if(!inScopeMap.contains(firstSetName))
@@ -87,7 +118,6 @@ object SetTheory:
           throw new RuntimeException("One of your scopes does not exist." + nextScope)
         }
         val newMap = map(nextScope).asInstanceOf[mutable.Map[String, Any]]
-        //println("Last returned map from main to scope: " + newMap)
         //Recurse until you get to .scope2, or whatever the last scope is
         recursiveResolveScope(newMap, reducedString)
       }
@@ -106,37 +136,30 @@ object SetTheory:
     @tailrec
     private def resolveScopeToMain(map: mutable.Map[String, Any], scopeHierarchyString: String, searchString: String, highestLevelMap: mutable.Map[String, Any]): mutable.Map[String, Any] =
     //If found in current scope
-      if(map.contains(searchString)) {
-        //println("Found")
+      if(map.contains(searchString))
         map
-      }
       //If not found in current scope, recurse towards main.
       else {
         //We are in main scope, else in some subscope
-        if(!scopeHierarchyString.contains(".")) {
-          //println("In main")
+        if(!scopeHierarchyString.contains("."))
           return highestLevelMap
-
-        }
         //main.scope1.scope2 would turn to main.scope1
         val reducedString = scopeHierarchyString.substring(0, scopeHierarchyString.lastIndexOf("."))
-        //println("reducedString in recurs: " + reducedString)
         val firstString = scopeHierarchyString.substring(0, scopeHierarchyString.indexOf("."))
         //This makes newMap equal to the parent Map the current Map is stored in
         val newMap = recursiveResolveScope(setMap, reducedString)
-        //println("New map: " + newMap)
         resolveScopeToMain(newMap, reducedString, searchString, highestLevelMap)
       }
 
+    //The newly declared class to the left inherits from the String name of the already existing class to the right
     infix def Extends(parentName: String): Unit =
       if(!classMap.contains(parentName))
         throw new RuntimeException("The class you want to extend does not exist")
-      //.eval runs ClassDef which defines current class and returns its string name
+      //.eval runs ClassDef which defines child class and returns its string name
       val currentName = this.eval.asInstanceOf[String]
-      //Current class
+      if(currentName == parentName)
+        throw new RuntimeException("Cannot inherit from own class.")
       val currentClassBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
-
-      //Parent class
       val parentClassBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
 
       //Prepend parent name to parent array
@@ -161,7 +184,6 @@ object SetTheory:
           }
           //Assign class variables
           currentMap("current") = recursiveResolveScope(setMap, parentScope.eval.asInstanceOf[String]+"." + newScope.eval.asInstanceOf[String])
-          //println("currentMap in Scope: " + currentMap("current"))
           if(!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
             currentScope("current") = parentScope.eval.asInstanceOf[String]+"." + newScope.eval.asInstanceOf[String]
           val returnArithExp = op3.eval
@@ -189,40 +211,29 @@ object SetTheory:
           val stringAnyTuple = function(tupleAsAny)
           //Need to create new scope
           val reducedScope = scopeMap(currentScope("current")) //main.scope1 -> main, main -> main
-          //println("reducedScope: " + reducedScope)
           val fullScope = currentScope("current") //main.scope1 -> main.scope1
-          //println("fullScope: " + fullScope)
           //reducedScopeMap
-          //println("setName: " + setName)
           if(currentMap("current").equals(setMap)) {
             currentMap("current") = setMap("main")
           }
           val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], fullScope, setName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-          ////println("Actual map: " + actualMapInScope)
-          ////println("mapInScope: " + mapInScope)
-          //println("setMap: " + setMap)
           //main.scope1 -> scope1
-          //println("fullScope: " + fullScope)
           if(!fullScope.equals("main")) {
             val onlyNewScope = fullScope.substring(fullScope.lastIndexOf(".")+1, fullScope.length)
             //If there's already a scope or set with this name, error out
             if(currentMap("current").asInstanceOf[mutable.Map[String, Any]].contains(onlyNewScope))
               throw new RuntimeException("There is already a set or scope with this name.\nIf you want to access a scope and not create a new one, type the same scope name for both fields.")
-            //println("onlyNewScope: " + onlyNewScope)
             //Insert new map of maps into scope for (set name -> (obj name -> obj))
             if(!mapInScope.contains(onlyNewScope)) {
               mapInScope += (onlyNewScope -> mutable.Map[String, mutable.Map[String, Any]](setName -> mutable.Map[String, Any](stringAnyTuple._1 -> stringAnyTuple._2)))
             }
-            ////println("This is the map with the new scope: " + actualMapInScope)
             mapInScope
           }
           //Main special case
           else {
             val onlyNewScope = fullScope
-            //println("onlyNewScope: " + onlyNewScope)
             if (!mapInScope.contains(setName)) {
               mapInScope += (setName -> mutable.Map[String, Any](stringAnyTuple._1 -> stringAnyTuple._2))
-              ////println("This is the map with the new scope: " + actualMapInScope)
             }
             else {
               val set = mapInScope(setName).asInstanceOf[mutable.Map[String, Any]]
@@ -240,7 +251,6 @@ object SetTheory:
           val setName = firstSetName.eval.asInstanceOf[String]
           val objectName = firstObjectName.eval.asInstanceOf[String]
           val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-          //println(mapInScope)
           if(!mapInScope.contains(setName)){
             "Set " + setName + " does not exist."
           }
@@ -313,7 +323,6 @@ object SetTheory:
           getExistingSets(setName1, setName2) //Checks if sets exist
           val firstSet = recursiveResolveScope(currentMap("current").asInstanceOf[mutable.Map[String, Any]], firstSetName)
           val secondSet = recursiveResolveScope(currentMap("current").asInstanceOf[mutable.Map[String, Any]], secondSetName)
-          //println(secondSet)
           for((k,v) <- firstSet) {
             for((keys,values) <- secondSet)
               cartesianMap += (k+keys -> (v, values))
@@ -338,17 +347,19 @@ object SetTheory:
         //Class operations
 
         case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nested: Any) =>
+          if(classMap.contains(className))
+            throw new RuntimeException("Class " + className + " is already defined.")
           classMap += recurseAddClassToMap(className, fields, constructor, methods, nested)
           className
 
-        case Field(fieldName: String, access: String) =>
+        case Field(fieldName: String, access: AccessModifier) =>
 
         case Constructor(commands: Array[FieldAssign]) =>
           commands
 
         case FieldAssign(fieldName: String, obj: Any) =>
 
-        case Method(methodName: String, access: String, commands: Array[ArithExp]) =>
+        case Method(methodName: String, access: AccessModifier, commands: Array[ArithExp]) =>
 
         case NewObject(className: String, variableName: String) =>
           val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,Any]]
@@ -476,12 +487,23 @@ object SetTheory:
             }
           }
           //If made it here, return global variable of last method
+
+        //Interface and Abstract Class
+
+        case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nested: Any) =>
+          if(classMap.contains(className))
+            throw new RuntimeException("Class " + className + " is already defined.")
+          classMap += recurseAddClassToMap(className, fields, constructor, methods, nested)
+          className
+
+        case InterfaceDecl(interfaceName: String, fields: Array[Field], methods: Array[Method], nested: Any) =>
+
+
+
       }
 
     //Helper method that creates the data structure in the readme. Used for indefinite nesting of classes.
     private def recurseAddClassToMap(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nested: Any): (String, mutable.Map[String, Any]) =
-      if(classMap.contains(className))
-        throw new RuntimeException("Class " + className + " is already defined.")
       val methodAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
       for(inner <- 0 to methods.length-2) {
         if(methods.length>1) {
@@ -493,11 +515,13 @@ object SetTheory:
         }
       }
       for(method <- methods) {
-        methodAccessMap(method._2).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
+        methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
       }
       val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
       for(field <- fields) {
-        fieldAccessMap(field._2).asInstanceOf[mutable.Map[String,Any]] += (field._1 -> None)
+        fieldAccessMap(field._2.eval).asInstanceOf[mutable.Map[String,Any]] += (field._1 -> None)
+        if(field._2.eval == "abstract")
+          throw new RuntimeException("Can't have abstract fields.")
       }
       //If there is a nested class, add it under "nested" and evaluate it until no more nested.
       nested match {
@@ -521,7 +545,7 @@ object SetTheory:
               "parents" -> Array[String](),
               "nested" -> None
             )
-            )
+          )
       }
 
     //Helper method that checks for method in current class

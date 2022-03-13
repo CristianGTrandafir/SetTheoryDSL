@@ -263,3 +263,6 @@ This resulted in ClassDef having ugly Array[] syntax so I could still support ar
 
 One note for the grader - I made setMap, objectMap, and classMap public so I could reference them from the Scalatests.
 I made them public so I could access the objects and classes and test their fields with the shouldBe command.
+
+//////////////////////////////////////////////////////////////////////////Homework3
+

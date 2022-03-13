@@ -4,11 +4,12 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import SetTheory.ArithExp.*
 import SetTheory.ArithExp
+import SetTheory.AccessModifier.*
 import scala.collection.mutable
 import SetTheory.classMap
 import SetTheory.objectMap
 import SetTheory.setMap
-//I made these 3 data structures public so I could complete the testing cases.
+//I made these 3 data structures public() so I could complete the testing cases.
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
 
@@ -99,16 +100,16 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   it should "define a new class, define a class that extends the first class, then instantiate an object" in {
 
     ClassDef("TestClass",
-      Array[Field](Field("a","private"), Field("b", "public"), Field("c", "protected")),
+      Array[Field](Field("a",Private()), Field("b", Public()), Field("c", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))),
-      Array[Method](Method("method1", "public", Array[ArithExp](Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))),
-        Method("method3", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      Array[Method](Method("method1", Public(), Array[ArithExp](Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))),
+        Method("method3", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       0).eval
 
     ClassDef("TestClass2",
-      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("c", 5))),
-      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       0) Extends "TestClass"
 
     NewObject("TestClass2", "randomName2").eval
@@ -119,7 +120,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   }
 
   //Test 9
-  behavior of "invoking public parent method"
+  behavior of "invoking public() parent method"
 
   it should "invoke TestClass inherited method on TestClass2 object" in {
     InvokeMethod("randomName2","method1").eval
@@ -127,34 +128,34 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   }
 
   //Test 10
-  behavior of "invoking private parent method"
+  behavior of "invoking private() parent method"
 
   it should "throw a RuntimeException" in {
     a [RuntimeException] should be thrownBy InvokeMethod("randomName2","method3").eval
   }
 
   //Test 11
-  behavior of "invoking private parent field"
+  behavior of "invoking private() parent field"
 
   it should "throw a RuntimeException" in {
     ClassDef("TestClass3",
-      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
-      //Accesses private field "a" in TestClass
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      //Accesses private() field "a" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("a", 5))),
-      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       0) Extends "TestClass"
     a [RuntimeException] should be thrownBy NewObject("TestClass3", "randomName3").eval
   }
 
   //Test 12
-  behavior of "accessing public parent field"
+  behavior of "accessing public() parent field"
 
   it should "set field b to 5000 in parent class" in {
     ClassDef("TestClass6",
-      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
-      //Accesses public field "b" in TestClass
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      //Accesses public() field "b" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("b", 5000))),
-      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       0) Extends "TestClass"
     NewObject("TestClass6", "object6").eval
     //object6's field b should be 5000
@@ -166,17 +167,29 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "create a nested class" in {
     ClassDef("TestClass4",
-      Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
-      //Accesses private field a in TestClass
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
-      Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       ClassDef("TestClass5",
-        Array[Field](Field("d","private"), Field("e", "public"), Field("f", "protected")),
-        //Accesses private field a in TestClass
+        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
         Constructor(Array[FieldAssign](FieldAssign("a", 5))),
-        Array[Method](Method("method2", "private", Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+        Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
         0)).eval
     //Check if TestClass4 has reference to TestClass5 inside of it
     classMap("TestClass4").asInstanceOf[mutable.Map[String,Any]]("nested").asInstanceOf[(String,Any)]._1 shouldBe "TestClass5"
+  }
+  ///////////////////////////////////////////////////////////////////////////////HW3 Tests
+
+  //Test 14
+  behavior of "Abstract Class"
+
+  it should "create an abstract class" in {
+    AbstractClassDef("TestClassA",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0).eval
+
+    classMap.contains("TestClassA") shouldBe true
   }
 }
