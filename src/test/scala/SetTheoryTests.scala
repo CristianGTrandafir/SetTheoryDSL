@@ -104,13 +104,13 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       Constructor(Array[FieldAssign](FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))),
       Array[Method](Method("method1", Public(), Array[ArithExp](Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))),
         Method("method3", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0).eval
+      0,0).eval
 
     ClassDef("TestClass2",
       Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("c", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0) Extends "TestClass"
+      0,0) Extends "TestClass"
 
     NewObject("TestClass2", "randomName2").eval
 
@@ -143,7 +143,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       //Accesses private() field "a" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("a", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0) Extends "TestClass"
+      0,0) Extends "TestClass"
     a [RuntimeException] should be thrownBy NewObject("TestClass3", "randomName3").eval
   }
 
@@ -156,7 +156,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       //Accesses public() field "b" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("b", 5000))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0) Extends "TestClass"
+      0,0) Extends "TestClass"
     NewObject("TestClass6", "object6").eval
     //object6's field b should be 5000
     objectMap("object6").asInstanceOf[mutable.Map[String, mutable.Map[String,mutable.Map[String,Int]]]]("fields")("public")("b") shouldBe 5000
@@ -174,22 +174,48 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
         Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
         Constructor(Array[FieldAssign](FieldAssign("a", 5))),
         Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-        0)).eval
+        0,0)
+      ,0).eval
     //Check if TestClass4 has reference to TestClass5 inside of it
-    classMap("TestClass4").asInstanceOf[mutable.Map[String,Any]]("nested").asInstanceOf[(String,Any)]._1 shouldBe "TestClass5"
+    classMap("TestClass4").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "TestClass5"
   }
   ///////////////////////////////////////////////////////////////////////////////HW3 Tests
 
   //Test 14
   behavior of "Abstract Class"
 
-  it should "create an abstract class" in {
+  it should "throw an error because abstract methods shouldn't have bodies" in {
+    a [RuntimeException] should be thrownBy AbstractClassDef("TestClassA",
+                                              Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                              Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+                                              //Abstract method with body
+                                              Array[Method](Method("method2", Abstract(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+                                              0,0).eval
+  }
+  //Test 15
+  behavior of "Abstract Class"
+
+  it should "define an abstract class normally" in {
     AbstractClassDef("TestClassA",
       Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
-      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0).eval
-
+      //Abstract method with no body
+      Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
+      0,0).eval
     classMap.contains("TestClassA") shouldBe true
   }
+
+  //Test 15
+  behavior of "Abstract Class"
+
+  it should "throw an error when attempted to be instantiated" in {
+    AbstractClassDef("TestClassB",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+      //Abstract method with no body
+      Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
+      0,0).eval
+    a [RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
+  }
+
 }
