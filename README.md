@@ -1,185 +1,62 @@
-# CS474Homework1
+# CS474Homework3
 Cristian Trandafir
 
-//////////////////////////////////////////////////////////////////////////Homework1
+### New for Homework 3:
 
-////////////////*How to set up*///////////////
+I removed the readme text from HW1 and HW2 - they can be found under the HW1 and HW2 branches.
+I tried to include all the relevant details from the past readmes in this one.
 
-Type "import SetTheory.ArithExp.*" at the top of your program.
-This will give you access to all of the commands.
-Simply type the commands listed in the following section with their appropriate parameters, and finish the statement off by calling .eval.
-You can print out the result of .eval-ing the commands for helpful information. 
-Here is an example of a well-formed statement:
+##How to set up:
 
-Assign(Identifier("Set1"), Insert(Identifier("ObjectName"), Identifier(Object))).eval
+Include the imports SetTheory.AccessModifier.\*, SetTheory.ArithExp.\*, and SetTheory.ArithExp at the top of your program.
+The first one, SetTheory.AccessModifiers.\*, is a new enum that you need to specify the access modifiers for fields and methods.
+The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
+The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-This statement will create a set Set1 with the element Object titled ObjectName.
+##How the new commands work:
 
-////////////////*How the commands work*///////////////
+####Old commands for reference:
 
-Identifier has 1 parameter.
-It is a string that can be used to identify a set or object depending on the context.
+Field has 2 parameters. The first is a String for the name of the class field you want to define. The second is a String for the access modifier of the field you want to define - "public"/"private"/"protected".
 
-Assign has 2 parameters.
-The first is the Identifier command for the set name.
-The second is the Insert command for the object name and object.
-Assign is used to create new sets with named elements.
+Method has 3 parameters. The first is a String for the name of the method you want to define. The second is a String for the access modifier of the method you want to define - "public"/"private"/"protected". The third is an Array of ArithExp - you can input an arbitrary amount of commands from HW1 into the array to define the method body.
 
-Variable has 1 parameter.
-It can be any object.
+FieldAssign has 2 parameters. The first is a String that specifies the field name that you want to find. The second is any object you want to assign to that field.
 
-Insert has 2 parameters.
-The first is an Identifier command for the object name.
-The second is the object itself (can be anything).
-Insert returns a (String, Any) tuple of the parameters passed in, so calling it by itself is pointless. 
-Call it in an Assign statement.
+Constructor has 1 parameter. It is an Array of FieldAssigns - you can input an arbitrary amount of FieldAssigns into the constructor body that will execute when NewObject is called.
 
-Delete has 2 parameters.
-The first is an Identifier command for the set name you want to search in for the deletion.
-The second is an Identifier command with the object's name that you want to remove from the set.
-Delete will throw an error if the set name or object name do not exist.
-Since the addition of Scope, it is also possible to delete sets and scopes with Delete, not just set items.
-Delete(Identifier("scopeName"), Identifier("setOrScope")) will delete the "setOrScope" from the program.
+####New commands:
 
-Check has 2 parameters.
-The first is an Identifier command for the set name you want to check.
-The second is an Identifier command for the object's name you want to check.
-Check will return a success or failure message based on the object or set's (non)existence.
+Public, Private, Protected, Abstract.
+These are new elements of the AccessModifier enum.
+These should be specified in place of strings like "public", "private", "protected", and "abstract".
 
-Macro has 2 parameters.
-The first is an Identifier command for the macro name you want to create.
-The second is any of the other commands listed here for the set of steps you want to bind the name to.
+InterfaceDecl has 5 parameters.
+The first is a string to name the interface.
+The second is an Array of Fields.
+The third is an Array of Methods.
+The fourth is a nested ClassDef.
+The fifth is a nested InterfaceDecl.
 
-UseMacro has 1 parameter.
-The first is an Identifier command for the macro name you want to use.
+AbstractClassDef has 6 parameters.
+The first is a string to name the abstract class.
+The second is an Array of Fields.
+The third is a Constructor - it contains an Array of FieldAssigns.
+The fourth is an Array of Methods.
+The fifth is a nested ClassDef.
+The sixth is a nested InterfaceDecl.
 
-Scope has 3 parameters.
-The first is an Identifier command for the scope name you want to create.
-The second is an Identifier command for the scope hierarchy you want to create your new scope in. 
-Every scope starts with the string "main".
-Make sure that when you specify a scope hierarchy you delimit each instance with a "."
-For example, "main.scope1.scope2".
-The third is any other command listed here.
+Extends is an infix method. 
+It has been updated for to meet the new specs.
+An InterfaceDecl can Extend an already existing interface by specifying its name as a String.
+A ClassDef or AbstractClassDef can Extend an already existing ClassDef or AbstractClassDef by specifying its name as a String.
 
-The Set operations are Union, Intersection, Difference, Symmetric (Difference), and (Cartesian) Product.
-Each take 2 Identifiers as their parameters.
-The first identifier is the name of the first set and the second identifier is the name of the second set.
-Each Set operation returns a Map representation of the set contents (strings mapped to objects).
+Implements is a new infix method.
+It is used by ClassDefs or AbstractClassDefs to Implement an already existing interface by specifying its name as a String.
 
-////////////////*How the Set commands are implemented*///////////////
+Here is an example of a well-formed AbstractClassDef statement:
 
-There is a setMap data structure that is a mapping of Strings to Anys.
-The way sets are inserted into this data structure is straightforward.
-Consider the following command: 
-Assign(Identifier("set10"), Insert(Identifier("var1"), Variable(1)))
-At the first layer, the set name "set10" is mapped to its contents.
-Its contents are composed of tuples of variable names mapped to variables.
-Note that scoping is covered in the "Scope Implementation" section.
-
-The Set commands create a new map.
-The new map is copied with the contents of the first map.
-A second new map is created.
-The second new map is copied with the contents of the second map.
-Then 2 sets are instantiated.
-Scala’s in-built conversion commands are used to convert the 2 maps to 2 sets.
-Then Scala's in-built set commands are used to get the desired result (for example, set1 union set2).
-Then the resulting set is converted back to a mutable map and the map is returned.
-
-Macro is implemented in the same way with a macroMap of (String->ArithExp) mappings.
-
-////////////////*Scope Implementation*///////////////
-
-Scopes are treated like sets. 
-The universal scope that every set is a part of is called "main".
-It is the first element in the setMap. 
-Every element added to setMap must be a submap of main.
-
-scopeMap keeps a mapping of the scope hierarchy. main is mapped to main. main.scope1 would be mapped to main. main.scope1.scope2 would be mapped to main.scope1 and so on.
-currentScope keeps a mapping of "current" to the last parent scope passed in by Scope.
-currentMap is a map that holds a subscope of the setMap.
-
-When Scope is called, scopeMap, currentScope, and currentMap are all updated.
-
-The method recursiveResolveScope() is used to navigate from the main scope of the setMap to the specified subscope by the second parameter of Insert.
-The method resolveScopeToMain() is used to start from a subscope, where it checks if a set or scope name exists.
-If it fails, it calls recursiveResolveScope() to get to the next parent scope, then rescan the variables.
-This repeats until no object is found, in which case a new object must be created.
-
-There is support for nested scopes and multiple scopes at the same scope level and anonymous scopes.
-Scopes are just like sets except with an extra level of indirection.
-Note that you cannot overwrite already existing scopes or sets with scopes.
-There is a check in Scope that will throw an error if this is attempted.
-
-////////////////*Limitations*///////////////
-
-The conversion from maps to sets back to maps will be very costly when the amount of items stored in each map is large.
-
-The Identifier command is redundant in almost every case. 
-It is good for forcing new users to learn the language parameters and syntax, but it gets repetitive typing it out when a simple String could be just as good.
-
-Adding scopes makes the setMap grow very fast with multiple nested layers.
-The search time for each variable also increases greatly with the more nested scope you pass in.
-
-When deleting or checking a specific scope, only the scope or set name can be checked or deleted, not the contents.
-This is an unintended consequence of treating scopes and names as equivalent.
-This can be fixed with an overloaded Delete or Check method that takes in an extra parameter to access the sets.
-I did not implement this because it would make the program crash or cause undesired behavior.
-If a user uses Delete with 3 parameters on a set, then the program would crash.
-If a user uses Delete with 2 parameters on a scope, then they would inadvertently delete the entire set rather than one of the elements.
-
-One last issue I ran into with my code was that I could never figure out how to return a specific type from case statements.
-This resulted in my code being bloated with .asInstanceOf[Type] statements.
-
-////////////////////////////////////////////////////////////////////////Homework 2
-
-////////////////*How to set up*///////////////
-
-New for Homework 2:
-
-Include the import "SetTheory.ArithExp" at the top of your program. 
-The previous one was only "SetTheory.ArithExp.*" which only imported the case statements like Identifier().
-Adding this import is necessary because you will need to create Arrays of ArithExp, which wasn't possible with only the previous import.
-
-
-////////////////*How the commands work*///////////////
-
-Field has 2 parameters.
-The first is a String for the name of the class field you want to define.
-The second is a String for the access modifier of the field you want to define - "public"/"private"/"protected".
-
-Method has 3 parameters.
-The first is a String for the name of the method you want to define.
-The second is a String for the access modifier of the method you want to define - "public"/"private"/"protected".
-The third is an Array of ArithExp - you can input an arbitrary amount of commands from HW1 into the array to define the method body.
-
-FieldAssign has 2 parameters.
-The first is a String that specifies the field name that you want to find.
-The second is any object you want to assign to that field.
-
-Constructor has 1 parameter.
-It is an Array of FieldAssigns - you can input an arbitrary amount of FieldAssigns into the constructor body that will execute when NewObject is called.
-
-NewObject has 2 parameters.
-The first is a String for the class name that you want to instantiate.
-The second is a String that functions as the object name.
-Instantiated objects are stored in the objectMap variable.
-
-InvokeMethod has 2 parameters.
-The first is a String for the object whose method you want to invoke.
-The second is a String for the method name that you want to invoke.
-
-ClassDef has 5 parameters.
-The first is a String for the name of the class you want to define.
-Next is an Array of Fields that will define all the class fields.
-Next is a Constructor that will contain an Array of FieldAssigns to execute when NewObject is called on the class.
-Next is an Array of Methods that will define all the class methods.
-Finally, there is ClassDef parameter for defining an arbitrary amount of inner nested classes.
-Simply leave any other variable like a 0 or String in the final parameter to stop the nesting at any point.
-Class definitions are stored in the classMap variable.
-
-Here is an example of a well-formed ClassDef statement:
-
-    ClassDef("TestClass",
+    AbstractClassDef("TestClass",
         Array[Field](
             Field("a","private"), Field("b", "public"), Field("c", "protected")
             ),
@@ -195,13 +72,14 @@ Here is an example of a well-formed ClassDef statement:
                 Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1))))
                 )
             ),
-        0).eval
+        0, //Nested ClassDef can go here
+        1  //Nested InterfaceDecl can go here
+    ).eval
 
-Extends is an infix method.
-The first parameter it takes is a new ClassDef for the class you want to define.
-The second parameter is a String for the class that you want to inherit from.
+This statement can include nested ClassDefs in place of the 0, or nested InterfaceDecls in place of the 1.
+It can be postfixed with "Extends "ClassName"" or with "Implements "InterfaceName"".
 
-////////////////*How the Class commands are implemented*///////////////
+##How the Classes and Interfaces are implemented:
 
     "className" -> Map("name" -> "className"
 
@@ -215,54 +93,114 @@ The second parameter is a String for the class that you want to inherit from.
 
                                    "protected" -> Map("fieldName" -> Any),
 
-                   "methods" -> Map("protected" -> Map("methodName" -> Array[ArithExp])
+                   "methods" -> Map("private" -> Map("methodName" -> Array[ArithExp])
 
-                                    "private" -> Map("methodName" -> Array[ArithExp])
+                                    "public" -> Map("methodName" -> Array[ArithExp])
 
-                                    "private" -> Map("methodName" -> Array[ArithExp])
+                                    "protected" -> Map("methodName" -> Array[ArithExp])
+                                    
+                                    "abstract" -> Map("methodName" -> Array[ArithExp])
 
-                   "nested" -> Map("className" -> class)) //(this data structure repeats in class)
+                   "nestedC" -> Map("className" -> classDef)
 
-This is the data structure that classMap stores. 
-It is created inside of ClassDef. 
-ClassDef calls the helper method recurseAddClassToMap that recursively creates this data structure.
-It is necessary for evaluating nested ClassDef calls which add an arbitrary amount of nested classes.
+                   "nestedI" -> Map("interfaceName" -> interfaceDecl) 
 
-Field, Method, and FieldAssign are used to structure the user's input data. 
-They don't return anything by themselves; it was simply easier to carry out the calculations inside of ClassDef.
-Constructor only returns the Array of FieldAssigns.
+This is the ClassDef data structure.
+One new addition is that support for nested Interfaces has been added.
+The AbstractClassDef data structure is identical to this.
+The InterfaceDecl data structure lacks the constructor field, and it can only have abstract methods, but it is otherwise identical.
 
-NewObject and InvokeMethod use the "parents" Array above as a stand-in for the vtable.
-The "parents" array simply stores Strings that keep track of the current class's parents.
-For example: ["parent", "grandparent","great-grandparent"].
+###How abstract methods work:
 
-NewObject uses a ReverseIterator to start at the oldest ancestor, copy the ancestor's fields into the current object, and then execute the ancestor's constructor.
-After this happens, the second oldest ancestor repeats the same process and the process repeats for all of the current class's parents.
-There is a check to make sure that no ancestor constructor accesses its own ancestor's private methods.
+Abstract is an element of the AccessModifier enum. 
+It works just like the other access modifiers.
+But there are additional checks within the code. 
 
-InvokeMethod uses the helper method recurseClassHierarchy to start from the current class and check for the method name upwards on the class hierarchy.
-Once the method is found (private ancestor methods are ignored), its ArithExp commands are executed.
+In case 1, an abstract method is defined with no body. 
+This means that the current class or interface doesn't provide a default implementation for the method.
+This means that if the current class has an abstract method with no body, the class cannot be instantiated.
+In order to be instantiated, the current class must provide their own (nonempty) definition for the abstract method with the AccessModifier type Abstract and the same method name - 
+this is effectively "overriding" the parent's abstract method.
 
-NewObject and InvokeMethod implement field and method overriding, respectively. 
-This is done implicitly of course, the user gets no error message.
-If Ancestor A defines Field B and Method C and Child D defines Field B and Method C, the ancestor field and method are shadowed in regards to a child object.
+In case 2, an abstract method is defined with a body.
+This means that there is a default implementation for it.
+Any class that extends or implements this method does not need to provide their own definition for the method.
+Hence, they can be instantiated normally.
 
-////////////////*Limitations*///////////////
+##Questions:
 
-While classes can be indefinitely nested, I did not implement multiple nested classes in one class.
-This could be done by passing in an Array of ClassDefs and calling recurseAddClassToMap on each element.
-I did not implement this because I don't think the specification required it.
-I only implemented indefinite nesting.
+####Can a class/interface inherit from itself?
 
-I limited Constructor to only execute FieldAssigns. 
-I also limited Method to only execute the HW1 commands. 
-This limits the flexibility of my implementation compared to normal programming languages, but I think it also makes it easier to keep track of commands.
+No.
+There is a check in Extends and Implements that prevents this from happening. 
+See Test 27.
+This would not break anything in my implementation, 
+but I disallowed it because it's more likely that the user of my language doesn't want to extend the exact same class - after all, it's pointless.
 
-One difficulty I had in coding this was adding varargs to case statements - it kept giving me errors and I wasn't sure how to fix it.
-This resulted in ClassDef having ugly Array[] syntax so I could still support arbitrary parameters.
+####Can an interface inherit from an abstract class with all pure methods?
 
-One note for the grader - I made setMap, objectMap, and classMap public so I could reference them from the Scalatests.
-I made them public so I could access the objects and classes and test their fields with the shouldBe command.
+No.
+I did not allow interfaces to Extends classes, only other interfaces.
+See Test 25.
+This is because my abstract classes include constructors, so having an interface Extends it would be awkward.
+I would have had to ignore the constructor and include a check that all of the abstract class's methods are pure.
+I don't think many users will want to do this so I disallowed it.
 
-//////////////////////////////////////////////////////////////////////////Homework3
+####Can an interface implement another interface?
 
+No.
+The documentation said this should throw an error.
+See Test 20.
+Although the documentation said it should throw an error, Extends and Implements are functionally the same in my code.
+I could have let interfaces Implements other interfaces instead of Extends them because NewObject and MethodInvocation handle the instantiation and method logic.
+Extends and Implements mainly update the parent array (my version of a vtable) to hold the parent class's name.
+
+####Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
+
+No.
+I only allowed classes to Implements a single interface.
+If a parent and grandparent interface contain the same method with the same signature, then the parent's method shadows the grandparent's method.
+This is how I implemented methods generally in HW2.
+A class cannot Extends 2 classes or Implements 2 interfaces so no problems with diamond inheritance arise.
+This is a serious limitation since most languages have some version of multiple inheritance.
+But I didn't want to implement multiple inheritance because of all the extra bugs that come with it.
+
+####Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
+
+Yes. 
+The most recently defined method will simply shadow the parent methods.
+This was the easiest resolution to implement.
+
+####Can an abstract class implement interfaces?
+
+Yes.
+See Test 28.
+I didn't foresee any complications by doing this so I allowed it.
+Neither abstract class nor interface can be instantiated.
+
+####Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
+
+Classes can only implement 1 interface.
+I did not include the return type as part of the method signature, so can method in a child class with the same name and AccessModifier will shadow the method in the parent class.
+
+####Can an abstract class inherit from a concrete class?
+
+Yes.
+There is no restriction on this because I allowed abstract classes to have public, private, and protected methods, as well as constructors.
+See Test 29.
+
+####Can an abstract class/interface be instantiated as anonymous concrete classes?
+
+No.
+I am inexperienced with anonymous classes so I'm not sure how they work or how I would implement them.
+
+##Limitations
+
+The biggest limitation is that classes cannot Implements multiple interfaces. 
+Neither can classes Extends multiple classes.
+So there is no mechanism for multiple inheritance in my language.
+This will likely be a huge downside for my users.
+
+Another limitation is that classes and interfaces can't have multiple nested classes on the same level.
+Classes and interfaces can indefinitely nest within other classes and interfaces, but there cannot be 2 classes or 2 interfaces at the same level.
+This could be fixed by creating an Array of nested classes and interfaces, but it would have complicated the code for not much more functionality.

@@ -185,17 +185,6 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   //Test 14
   behavior of "Abstract Class"
 
-  it should "throw an error because abstract methods shouldn't have bodies" in {
-    a [RuntimeException] should be thrownBy AbstractClassDef("TestClassA",
-                                              Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                              Constructor(Array[FieldAssign](FieldAssign("d", 5))),
-                                              //Abstract method with body
-                                              Array[Method](Method("method2", Abstract(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-                                              0,0).eval
-  }
-  //Test 15
-  behavior of "Abstract Class"
-
   it should "define an abstract class normally" in {
     AbstractClassDef("TestClassA",
       Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
@@ -206,7 +195,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     classMap.contains("TestClassA") shouldBe true
   }
 
-  //Test 16
+  //Test 15
   behavior of "Abstract Class"
 
   it should "throw an error when attempted to be instantiated" in {
@@ -219,7 +208,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     a [RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
   }
 
-  //Test 17
+  //Test 16
   behavior of "Concrete Class Defining Abstract Method With No Body"
 
   it should "throw an error when attempted to be defined" in {
@@ -232,7 +221,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
                                             0,0).eval
   }
 
-  //Test 18
+  //Test 17
   behavior of "Concrete Class overriding abstract method"
 
   it should "allow class that implements abstract method to be instantiated" in {
@@ -256,7 +245,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Check(Identifier("setC"), Identifier("var20")).eval shouldBe "Set setC does contain var20."
   }
 
-  //Test 19
+  //Test 18
   behavior of "Interface"
 
   it should "be declared normally" in {
@@ -269,7 +258,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     interfaceMap.contains("TestInterface") shouldBe true
   }
 
-  //Test 20
+  //Test 19
   behavior of "Interface"
 
   it should "throw an error for defining non-abstract method" in {
@@ -280,7 +269,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
                                               0,0).eval
   }
 
-  //Test 21
+  //Test 20
   behavior of "Interface implementing another interface"
 
   it should "throw an error for not using extends" in {
@@ -290,7 +279,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
                                             0,0) Implements "TestInterface")
   }
 
-  //Test 22
+  //Test 21
   behavior of "Class implementing an interface"
 
   it should "gain access to its methods" in {
@@ -304,7 +293,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     classMap("ConcreteImplementer2").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
   }
 
-  //Test 23
+  //Test 22
   behavior of "Class implementing an interface"
 
   it should "throw an error due to not implementing the interface's abstract method" in {
@@ -316,6 +305,130 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       0,0) Implements "TestInterface"
 
     a [RuntimeException] should be thrownBy NewObject("ConcreteImplementer3", "randomName").eval
+  }
+
+  //Test 23
+  behavior of "Class Nesting"
+
+  it should "nest multiple combinations of classes and interfaces" in {
+    ClassDef("Nesting",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+      //Nested Class
+      ClassDef("NestingClass1",
+        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+        Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+        Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+        0,
+        //Nested Interface within a Nested Class
+        InterfaceDecl("TestInterface2",
+          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+          0,
+          0)
+      ),
+      //Nested Interface
+      InterfaceDecl("TestInterface1",
+        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+        Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+        //Nested Class within a Nested Interface
+        ClassDef("NestingClass2",
+          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+          Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+          0,
+          0),
+        //Nested interface within a Nested Interface
+        InterfaceDecl("TestInterface3",
+          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+          0,
+          0)
+      )
+    ).eval
+
+    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "NestingClass1"
+    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface2"
+    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface1"
+    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "NestingClass2"
+    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface3"
+  }
+
+  //Test 24
+  behavior of "Interface Extending another Interface"
+
+  it should "work normally" in {
+    InterfaceDecl("TestInterface5",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Method](Method("random", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+      0,0) Extends "TestInterface"
+
+    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String,Array[String]]]("parents")(0) shouldBe "TestInterface"
+    //Checks if the interface has the "abstractMethod" that it should inherit from TestInterface
+    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String,mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]]("methods")("abstract").contains("abstractMethod") shouldBe true
+  }
+
+  //Test 25
+  behavior of "Interface Extending a Class"
+
+  it should "throw an error" in {
+    a [RuntimeException] should be thrownBy (InterfaceDecl("TestInterface7",
+                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                            Array[Method](Method("random", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+                                            0,0) Extends "ConcreteImplementer")
+
+
+  }
+
+  //Test 26
+  behavior of "Class Implementing a Class"
+
+  it should "throw an error" in {
+    a [RuntimeException] should be thrownBy (ClassDef("TestClass10",
+                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                            Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+                                            Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+                                            0,0) Implements "ConcreteImplementer")
+  }
+
+  //Test 27
+  behavior of "Class Extending Itself"
+
+  it should "throw an error" in {
+    a [RuntimeException] should be thrownBy (ClassDef("TestClass100",
+                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                            Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+                                            Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+                                            0,0) Extends "TestClass100")
+  }
+
+  //Test 28
+  behavior of "Abstract Class implementing an interface"
+
+  it should "work normally" in {
+    AbstractClassDef("AbstractClassImpl",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      //Doesn't implement abstract method
+      Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+      0,0) Implements "TestInterface"
+
+    classMap("AbstractClassImpl").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
+  }
+
+  //Test 29
+  behavior of "Abstract Class Inheriting from Concrete Class"
+
+  it should "work normally" in {
+    AbstractClassDef("NormalDef1",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      //Doesn't implement abstract method
+      Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+      0,0) Extends "ConcreteImplementer2"
+
+    classMap("NormalDef1").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "ConcreteImplementer2"
   }
 
 }

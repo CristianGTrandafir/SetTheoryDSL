@@ -1,7 +1,7 @@
 //Cristian Trandafir
 
 import SetTheory.AccessModifier.{Private, Protected, Public}
-import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InvokeMethod, Method, NewObject}
+import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InvokeMethod, Method, NewObject, InterfaceDecl}
 import sun.security.ec.point.ProjectivePoint.Mutable
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -155,7 +155,8 @@ object SetTheory:
 
     infix def Implements (interfaceName: String): Unit =
       if(!this.isInstanceOf[ClassDef])
-        throw new RuntimeException("Only classes can implement interfaces")
+        if(!this.isInstanceOf[AbstractClassDef])
+          throw new RuntimeException("Only classes can implement interfaces")
       if(!interfaceMap.contains(interfaceName))
         throw new RuntimeException("The interface you want to extend does not exist")
       val currentName = this.eval.asInstanceOf[String]
@@ -173,29 +174,78 @@ object SetTheory:
       for(method <- currentAbstractMap)
         if(!parentAbstractMap.contains(method._1))
           throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
-          
+
     //The newly declared class to the left inherits from the String name of the already existing class to the right
     infix def Extends(parentName: String): Unit =
-      if(!classMap.contains(parentName))
-        throw new RuntimeException("The class you want to extend does not exist")
-      //.eval runs ClassDef which defines child class and returns its string name
-      val currentName = this.eval.asInstanceOf[String]
-      if(currentName == parentName)
-        throw new RuntimeException("Cannot inherit from own class.")
-      //Prepend parent name to parent array
-      val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
-      val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
-      currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
-      //Override parent's abstract methods
-      val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-      val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-      for(method <- parentAbstractMap)
-        //Add any unimplemented methods from parent class into child class
-        if(!currentAbstractMap.contains(method._1))
-          currentAbstractMap += (method._1 -> method._2)
-      for(method <- currentAbstractMap)
-        if(!parentAbstractMap.contains(method._1))
-          throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
+      this match {
+        case classDef: ArithExp.ClassDef =>
+
+          if(!classMap.contains(parentName))
+            throw new RuntimeException("The class you want to extend does not exist")
+          //.eval runs ClassDef which defines child class and returns its string name
+          val currentName = this.eval.asInstanceOf[String]
+          if(currentName == parentName)
+            throw new RuntimeException("Cannot inherit from own class.")
+          //Prepend parent name to parent array
+          val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
+          val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+          currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
+          //Override parent's abstract methods
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          for(method <- parentAbstractMap)
+          //Add any unimplemented methods from parent class into child class
+            if(!currentAbstractMap.contains(method._1))
+              currentAbstractMap += (method._1 -> method._2)
+          for(method <- currentAbstractMap)
+            if(!parentAbstractMap.contains(method._1))
+              throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
+
+        case abstractClassDef: ArithExp.AbstractClassDef =>
+
+          if(!classMap.contains(parentName))
+            throw new RuntimeException("The class you want to extend does not exist")
+          //.eval runs ClassDef which defines child class and returns its string name
+          val currentName = this.eval.asInstanceOf[String]
+          if(currentName == parentName)
+            throw new RuntimeException("Cannot inherit from own class.")
+          //Prepend parent name to parent array
+          val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
+          val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+          currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
+          //Override parent's abstract methods
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          for(method <- parentAbstractMap)
+          //Add any unimplemented methods from parent class into child class
+            if(!currentAbstractMap.contains(method._1))
+              currentAbstractMap += (method._1 -> method._2)
+          for(method <- currentAbstractMap)
+            if(!parentAbstractMap.contains(method._1))
+              throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
+
+        case interfaceDecl: ArithExp.InterfaceDecl =>
+
+          if(!interfaceMap.contains(parentName))
+            throw new RuntimeException("The interface you want to extend does not exist")
+          //.eval runs ClassDef which defines child class and returns its string name
+          val currentName = this.eval.asInstanceOf[String]
+          //Prepend parent name to parent array
+          val currentBlueprintMap = interfaceMap(currentName).asInstanceOf[mutable.Map[String, Any]]
+          val parentBlueprintMap = interfaceMap(parentName).asInstanceOf[mutable.Map[String, Any]]
+          currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
+          //Override parent's abstract methods
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
+          for(method <- parentAbstractMap)
+          //Add any unimplemented methods from parent class into child class
+            if(!currentAbstractMap.contains(method._1))
+              currentAbstractMap += (method._1 -> method._2)
+
+        case _ =>
+          throw new RuntimeException("Only classes and interfaces can use Extends.")
+      }
+
 
     def eval: Any =
       this match{
@@ -553,14 +603,6 @@ object SetTheory:
         case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any) =>
           if(classMap.contains(className))
             throw new RuntimeException("Class " + className + " is already defined.")
-          for(method <- methods) {
-            if(method._2.eval == "abstract") {
-              val arithArray = method._3.asInstanceOf[Array[ArithExp]]
-              if (!arithArray.isEmpty){
-                throw new RuntimeException("Cannot define abstract method with body.")
-              }
-            }
-          }
           classMap += recurseAddClassToMap(className, fields, constructor, methods, nestedC, nestedI)
           className
 
@@ -598,27 +640,57 @@ object SetTheory:
       nestedC match {
         case classDef: ArithExp.ClassDef =>
           val stringMapTuple = recurseAddClassToMap(classDef.className, classDef.fields, classDef.constructor, classDef.methods, classDef.nestedC, classDef.nestedI)
-          (className -> mutable.Map[String, Any]
-            ("fields" -> fieldAccessMap,
-              "constructor" -> constructor.eval,
-              "methods" -> methodAccessMap,
-              "name" -> className,
-              "parents" -> Array[String](),
-              "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
-              "nestedI" -> None
-            )
-          )
+          nestedI match {
+            case interfaceDecl: ArithExp.InterfaceDecl =>
+              val stringMapTuple2 = recurseAddInterfaceToMap(interfaceDecl.interfaceName, interfaceDecl.fields, interfaceDecl.methods, interfaceDecl.nestedC, interfaceDecl.nestedI)
+              (className -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "constructor" -> constructor.eval,
+                  "methods" -> methodAccessMap,
+                  "name" -> className,
+                  "parents" -> Array[String](),
+                  "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
+                  "nestedI" -> (stringMapTuple2._1 -> stringMapTuple2._2)
+                )
+                )
+            case _ =>
+              (className -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "constructor" -> constructor.eval,
+                  "methods" -> methodAccessMap,
+                  "name" -> className,
+                  "parents" -> Array[String](),
+                  "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
+                  "nestedI" -> None
+                )
+                )
+          }
         case _ =>
-          (className -> mutable.Map[String, Any]
-            ("fields" -> fieldAccessMap,
-              "constructor" -> constructor.eval,
-              "methods" -> methodAccessMap,
-              "name" -> className,
-              "parents" -> Array[String](),
-              "nestedC" -> None,
-              "nestedI" -> None
-            )
-          )
+          nestedI match {
+            case interfaceDecl: ArithExp.InterfaceDecl =>
+              val stringMapTuple2 = recurseAddInterfaceToMap(interfaceDecl.interfaceName, interfaceDecl.fields, interfaceDecl.methods, interfaceDecl.nestedC, interfaceDecl.nestedI)
+              (className -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "constructor" -> constructor.eval,
+                  "methods" -> methodAccessMap,
+                  "name" -> className,
+                  "parents" -> Array[String](),
+                  "nestedC" -> None,
+                  "nestedI" -> (stringMapTuple2._1 -> stringMapTuple2._2)
+                )
+                )
+            case _ =>
+              (className -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "constructor" -> constructor.eval,
+                  "methods" -> methodAccessMap,
+                  "name" -> className,
+                  "parents" -> Array[String](),
+                  "nestedC" -> None,
+                  "nestedI" -> None
+                )
+                )
+          }
       }
     //"interface" -> Map("name" -> "interfaceName"
     //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
@@ -657,25 +729,53 @@ object SetTheory:
       nestedC match {
         case classDef: ArithExp.ClassDef =>
           val stringMapTuple = recurseAddClassToMap(classDef.className, classDef.fields, classDef.constructor, classDef.methods, classDef.nestedC, classDef.nestedI)
-          (interfaceName -> mutable.Map[String, Any]
-            ("fields" -> fieldAccessMap,
-              "methods" -> methodAccessMap,
-              "name" -> interfaceName,
-              "parents" -> Array[String](),
-              "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
-              "nestedI" -> None
-            )
-            )
+          nestedI match {
+            case interfaceDecl: ArithExp.InterfaceDecl =>
+              val stringMapTuple2 = recurseAddInterfaceToMap(interfaceDecl.interfaceName, interfaceDecl.fields, interfaceDecl.methods, interfaceDecl.nestedC, interfaceDecl.nestedI)
+              (interfaceName -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "methods" -> methodAccessMap,
+                  "name" -> interfaceName,
+                  "parents" -> Array[String](),
+                  "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
+                  "nestedI" -> (stringMapTuple2._1 -> stringMapTuple2._2)
+                )
+                )
+            case _ =>
+              (interfaceName -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "methods" -> methodAccessMap,
+                  "name" -> interfaceName,
+                  "parents" -> Array[String](),
+                  "nestedC" -> (stringMapTuple._1 -> stringMapTuple._2),
+                  "nestedI" -> None
+                )
+                )
+          }
         case _ =>
-          (interfaceName -> mutable.Map[String, Any]
-            ("fields" -> fieldAccessMap,
-              "methods" -> methodAccessMap,
-              "name" -> interfaceName,
-              "parents" -> Array[String](),
-              "nestedC" -> None,
-              "nestedI" -> None
-            )
-            )
+          nestedI match {
+            case interfaceDecl: ArithExp.InterfaceDecl =>
+              val stringMapTuple2 = recurseAddInterfaceToMap(interfaceDecl.interfaceName, interfaceDecl.fields, interfaceDecl.methods, interfaceDecl.nestedC, interfaceDecl.nestedI)
+              (interfaceName -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "methods" -> methodAccessMap,
+                  "name" -> interfaceName,
+                  "parents" -> Array[String](),
+                  "nestedC" -> None,
+                  "nestedI" -> (stringMapTuple2._1 -> stringMapTuple2._2)
+                )
+                )
+            case _ =>
+              (interfaceName -> mutable.Map[String, Any]
+                ("fields" -> fieldAccessMap,
+                  "methods" -> methodAccessMap,
+                  "name" -> interfaceName,
+                  "parents" -> Array[String](),
+                  "nestedC" -> None,
+                  "nestedI" -> None
+                )
+                )
+          }
       }
     }
 
