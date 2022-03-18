@@ -9,6 +9,7 @@ import scala.collection.mutable
 import SetTheory.classMap
 import SetTheory.objectMap
 import SetTheory.setMap
+import SetTheory.interfaceMap
 //I made these 3 data structures public() so I could complete the testing cases.
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
@@ -205,7 +206,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     classMap.contains("TestClassA") shouldBe true
   }
 
-  //Test 15
+  //Test 16
   behavior of "Abstract Class"
 
   it should "throw an error when attempted to be instantiated" in {
@@ -218,7 +219,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     a [RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
   }
 
-  //Test 16
+  //Test 17
   behavior of "Concrete Class Defining Abstract Method With No Body"
 
   it should "throw an error when attempted to be defined" in {
@@ -231,10 +232,10 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
                                             0,0).eval
   }
 
-  //Test 17
-  behavior of "Abstract Class overriding abstract method"
+  //Test 18
+  behavior of "Concrete Class overriding abstract method"
 
-  it should "allow class that overrides to be instantiated" in {
+  it should "allow class that implements abstract method to be instantiated" in {
     AbstractClassDef("TestClassC",
       Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
@@ -253,6 +254,68 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     InvokeMethod("ConcreteVar","abstractMethod").eval
 
     Check(Identifier("setC"), Identifier("var20")).eval shouldBe "Set setC does contain var20."
+  }
+
+  //Test 19
+  behavior of "Interface"
+
+  it should "be declared normally" in {
+    InterfaceDecl("TestInterface",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      //Default method
+      Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+      0,0).eval
+
+    interfaceMap.contains("TestInterface") shouldBe true
+  }
+
+  //Test 20
+  behavior of "Interface"
+
+  it should "throw an error for defining non-abstract method" in {
+    a [RuntimeException] should be thrownBy InterfaceDecl("TestInterface1",
+                                              Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                              //Public method throws error
+                                              Array[Method](Method("abstractMethod", Public(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+                                              0,0).eval
+  }
+
+  //Test 21
+  behavior of "Interface implementing another interface"
+
+  it should "throw an error for not using extends" in {
+    a [RuntimeException] should be thrownBy (InterfaceDecl("TestInterface1",
+                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+                                            Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+                                            0,0) Implements "TestInterface")
+  }
+
+  //Test 22
+  behavior of "Class implementing an interface"
+
+  it should "gain access to its methods" in {
+    ClassDef("ConcreteImplementer2",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      //Implements abstract method
+      Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+      0,0) Implements "TestInterface"
+
+    classMap("ConcreteImplementer2").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
+  }
+
+  //Test 23
+  behavior of "Class implementing an interface"
+
+  it should "throw an error due to not implementing the interface's abstract method" in {
+    ClassDef("ConcreteImplementer3",
+      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("e", 5))),
+      //Doesn't implement abstract method
+      Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
+      0,0) Implements "TestInterface"
+
+    a [RuntimeException] should be thrownBy NewObject("ConcreteImplementer3", "randomName").eval
   }
 
 }
