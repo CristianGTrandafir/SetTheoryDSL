@@ -21,7 +21,7 @@ object SetTheory:
   //                   "innerI" -> Map("interfaceName" -> interface)
   val objectMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
   //objectName -> objectInstantiation
-  val classMap: mutable.Map[String, Any] = mutable.Map[String,Any]()
+  val classMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
   //"className" -> Map("name" -> "className"
   //                   "constructor" -> Array[FieldAssign("fieldName",Any])
   //                   "parents" -> Array[parentClassNames] immediate parent first
@@ -42,6 +42,12 @@ object SetTheory:
   private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("current" -> "main")
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
+
+  def IF(condition: => Boolean, thenClause: => Any, elseClause: => Any): Any =
+      if (condition)
+        thenClause
+      else
+        elseClause
 
   enum AccessModifier:
     case Private()
@@ -90,17 +96,19 @@ object SetTheory:
     //Abstract Classes and Interfaces
     case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any)
     case InterfaceDecl(interfaceName: String, fields: Array[Field], methods: Array[Method], nestedC: Any, nestedI: Any)
+    //Exception Handling
+
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
       val firstSetName = setName1.eval.asInstanceOf[String]
       val secondSetName = setName2.eval.asInstanceOf[String]
       val a = scopeMap(currentScope("current"))
-      val inScopeMap = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"),firstSetName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-      if(!inScopeMap.contains(firstSetName))
+      val inScopeMap = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), firstSetName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+      if (!inScopeMap.contains(firstSetName))
         throw new RuntimeException("First set not found")
-      val inScopeMap2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"),secondSetName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-      if(!inScopeMap2.contains(secondSetName))
+      val inScopeMap2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), secondSetName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+      if (!inScopeMap2.contains(secondSetName))
         throw new RuntimeException("Second set not found")
       val firstSet = inScopeMap(firstSetName).asInstanceOf[mutable.Map[String, Any]].toSet
       val secondSet = inScopeMap2(secondSetName).asInstanceOf[mutable.Map[String, Any]].toSet
@@ -110,13 +118,13 @@ object SetTheory:
     @tailrec
     private def recursiveResolveScope(map: mutable.Map[String, Any], scopeHierarchyString: String): mutable.Map[String, Any] =
     //If scope string still has "." delimiter - advance the scope from main.scope1 -> scope1
-      if(scopeHierarchyString.contains(".")) {
+      if (scopeHierarchyString.contains(".")) {
         //main.scope1.scope2 would turn to scope1.scope2
-        val reducedString = scopeHierarchyString.substring(scopeHierarchyString.indexOf(".")+1, scopeHierarchyString.length)
+        val reducedString = scopeHierarchyString.substring(scopeHierarchyString.indexOf(".") + 1, scopeHierarchyString.length)
         //main.scope1.scope would turn to main
-        val nextScope =  scopeHierarchyString.substring(0, scopeHierarchyString.indexOf("."))
+        val nextScope = scopeHierarchyString.substring(0, scopeHierarchyString.indexOf("."))
         //This command would be main(reducedString) which returns the scope1Map that contains scope2Map
-        if(!map.contains(nextScope)) {
+        if (!map.contains(nextScope)) {
           throw new RuntimeException("One of your scopes does not exist." + nextScope)
         }
         val newMap = map(nextScope).asInstanceOf[mutable.Map[String, Any]]
@@ -126,24 +134,24 @@ object SetTheory:
       //If scope string has no "." delimiter - this is the last scope.
       else {
         //No past usages found so just return current scope
-        if(!map.contains(scopeHierarchyString)) {
-          currentMap("current").asInstanceOf[mutable.Map[String,Any]]
+        if (!map.contains(scopeHierarchyString)) {
+          currentMap("current").asInstanceOf[mutable.Map[String, Any]]
         }
         //Found
         else
-          map(scopeHierarchyString).asInstanceOf[mutable.Map[String,Any]]
+          map(scopeHierarchyString).asInstanceOf[mutable.Map[String, Any]]
       }
 
     //Starts from current scope and searches for the string through the parent scopes of current scope. Returns current scope if searchString is not found.
     @tailrec
     private def resolveScopeToMain(map: mutable.Map[String, Any], scopeHierarchyString: String, searchString: String, highestLevelMap: mutable.Map[String, Any]): mutable.Map[String, Any] =
     //If found in current scope
-      if(map.contains(searchString))
+      if (map.contains(searchString))
         map
       //If not found in current scope, recurse towards main.
       else {
         //We are in main scope, else in some subscope
-        if(!scopeHierarchyString.contains("."))
+        if (!scopeHierarchyString.contains("."))
           return highestLevelMap
         //main.scope1.scope2 would turn to main.scope1
         val reducedString = scopeHierarchyString.substring(0, scopeHierarchyString.lastIndexOf("."))
@@ -153,11 +161,11 @@ object SetTheory:
         resolveScopeToMain(newMap, reducedString, searchString, highestLevelMap)
       }
 
-    infix def Implements (interfaceName: String): Unit =
-      if(!this.isInstanceOf[ClassDef])
-        if(!this.isInstanceOf[AbstractClassDef])
+    infix def Implements(interfaceName: String): Unit =
+      if (!this.isInstanceOf[ClassDef])
+        if (!this.isInstanceOf[AbstractClassDef])
           throw new RuntimeException("Only classes can implement interfaces")
-      if(!interfaceMap.contains(interfaceName))
+      if (!interfaceMap.contains(interfaceName))
         throw new RuntimeException("The interface you want to extend does not exist")
       val currentName = this.eval.asInstanceOf[String]
       //Prepend parent name to parent array
@@ -165,14 +173,14 @@ object SetTheory:
       val parentBlueprintMap = interfaceMap(interfaceName).asInstanceOf[mutable.Map[String, Any]]
       currentBlueprintMap("parents") = interfaceName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
       //Override parent's abstract methods
-      val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-      val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-      for(method <- parentAbstractMap)
+      val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+      val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+      for (method <- parentAbstractMap)
       //Add any unimplemented methods from parent class into child class
-        if(!currentAbstractMap.contains(method._1))
+        if (!currentAbstractMap.contains(method._1))
           currentAbstractMap += (method._1 -> method._2)
-      for(method <- currentAbstractMap)
-        if(!parentAbstractMap.contains(method._1))
+      for (method <- currentAbstractMap)
+        if (!parentAbstractMap.contains(method._1))
           throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
 
     //The newly declared class to the left inherits from the String name of the already existing class to the right
@@ -180,53 +188,53 @@ object SetTheory:
       this match {
         case classDef: ArithExp.ClassDef =>
 
-          if(!classMap.contains(parentName))
+          if (!classMap.contains(parentName))
             throw new RuntimeException("The class you want to extend does not exist")
           //.eval runs ClassDef which defines child class and returns its string name
           val currentName = this.eval.asInstanceOf[String]
-          if(currentName == parentName)
+          if (currentName == parentName)
             throw new RuntimeException("Cannot inherit from own class.")
           //Prepend parent name to parent array
           val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
           val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
           currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
           //Override parent's abstract methods
-          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          for(method <- parentAbstractMap)
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          for (method <- parentAbstractMap)
           //Add any unimplemented methods from parent class into child class
-            if(!currentAbstractMap.contains(method._1))
+            if (!currentAbstractMap.contains(method._1))
               currentAbstractMap += (method._1 -> method._2)
-          for(method <- currentAbstractMap)
-            if(!parentAbstractMap.contains(method._1))
+          for (method <- currentAbstractMap)
+            if (!parentAbstractMap.contains(method._1))
               throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
 
         case abstractClassDef: ArithExp.AbstractClassDef =>
 
-          if(!classMap.contains(parentName))
+          if (!classMap.contains(parentName))
             throw new RuntimeException("The class you want to extend does not exist")
           //.eval runs ClassDef which defines child class and returns its string name
           val currentName = this.eval.asInstanceOf[String]
-          if(currentName == parentName)
+          if (currentName == parentName)
             throw new RuntimeException("Cannot inherit from own class.")
           //Prepend parent name to parent array
           val currentBlueprintMap = classMap(currentName).asInstanceOf[mutable.Map[String, Any]]
           val parentBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
           currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
           //Override parent's abstract methods
-          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          for(method <- parentAbstractMap)
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          for (method <- parentAbstractMap)
           //Add any unimplemented methods from parent class into child class
-            if(!currentAbstractMap.contains(method._1))
+            if (!currentAbstractMap.contains(method._1))
               currentAbstractMap += (method._1 -> method._2)
-          for(method <- currentAbstractMap)
-            if(!parentAbstractMap.contains(method._1))
+          for (method <- currentAbstractMap)
+            if (!parentAbstractMap.contains(method._1))
               throw new RuntimeException("Cannot override abstract method that doesn't exist in parent classes.")
 
         case interfaceDecl: ArithExp.InterfaceDecl =>
 
-          if(!interfaceMap.contains(parentName))
+          if (!interfaceMap.contains(parentName))
             throw new RuntimeException("The interface you want to extend does not exist")
           //.eval runs ClassDef which defines child class and returns its string name
           val currentName = this.eval.asInstanceOf[String]
@@ -235,11 +243,11 @@ object SetTheory:
           val parentBlueprintMap = interfaceMap(parentName).asInstanceOf[mutable.Map[String, Any]]
           currentBlueprintMap("parents") = parentName +: parentBlueprintMap("parents").asInstanceOf[Array[String]]
           //Override parent's abstract methods
-          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]("abstract")
-          for(method <- parentAbstractMap)
+          val currentAbstractMap = currentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          val parentAbstractMap = parentBlueprintMap("methods").asInstanceOf[mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]("abstract")
+          for (method <- parentAbstractMap)
           //Add any unimplemented methods from parent class into child class
-            if(!currentAbstractMap.contains(method._1))
+            if (!currentAbstractMap.contains(method._1))
               currentAbstractMap += (method._1 -> method._2)
 
         case _ =>
@@ -248,25 +256,25 @@ object SetTheory:
 
 
     def eval: Any =
-      this match{
-        case Scope(newScope:Identifier, parentScope: Identifier, op3: ArithExp) =>
+      this match {
+        case Scope(newScope: Identifier, parentScope: Identifier, op3: ArithExp) =>
           //Parent scope does not exist
-          if(!scopeMap.contains(parentScope.eval.asInstanceOf[String]))
+          if (!scopeMap.contains(parentScope.eval.asInstanceOf[String]))
             throw new RuntimeException("Specified scope does not exist.")
           //'.' is delimiter for Strings that keep track of scope, don't include
-          if(newScope.eval.asInstanceOf[String].contains(".")) {
-            if(!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
+          if (newScope.eval.asInstanceOf[String].contains(".")) {
+            if (!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
               throw new RuntimeException("Please do not include '.' in your scope name.")
           }
           //Not creating new scope, just editing specified one
-          if(!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String])) {
+          if (!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String])) {
             //Include parentScope.newScope in map pointing to parentScope
-            scopeMap += (parentScope.eval.asInstanceOf[String]+"."+newScope.eval.asInstanceOf[String] -> parentScope.eval.asInstanceOf[String])
+            scopeMap += (parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String] -> parentScope.eval.asInstanceOf[String])
           }
           //Assign class variables
-          currentMap("current") = recursiveResolveScope(setMap, parentScope.eval.asInstanceOf[String]+"." + newScope.eval.asInstanceOf[String])
-          if(!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
-            currentScope("current") = parentScope.eval.asInstanceOf[String]+"." + newScope.eval.asInstanceOf[String]
+          currentMap("current") = recursiveResolveScope(setMap, parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String])
+          if (!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
+            currentScope("current") = parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String]
           val returnArithExp = op3.eval
           //Reset so ArithExp commands without Scope in them don't get messed up.
           currentMap("current") = setMap
@@ -277,35 +285,37 @@ object SetTheory:
         case Variable(obj) => obj
 
         //Returns (String, Any) tuple for insertion
-        case Insert(op1:Identifier, op2:Any) => (op1.eval, op2.eval)
+        case Insert(op1: Identifier, op2: Any) => (op1.eval, op2.eval)
 
         //Inserts op2 into set name found in setMap
         case Assign(name: Identifier, insertCommand: Insert) =>
           val setName = name.eval.asInstanceOf[String]
           val tupleAsAny = insertCommand.eval
+
           //In-line function that reseparates the Any into a tuple
           def function(msg: Any): (String, Any) = {
             msg match {
               case (a: String, b: Any) => (a, b)
             }
           }
+
           val stringAnyTuple = function(tupleAsAny)
           //Need to create new scope
           val reducedScope = scopeMap(currentScope("current")) //main.scope1 -> main, main -> main
           val fullScope = currentScope("current") //main.scope1 -> main.scope1
           //reducedScopeMap
-          if(currentMap("current").equals(setMap)) {
+          if (currentMap("current").equals(setMap)) {
             currentMap("current") = setMap("main")
           }
           val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], fullScope, setName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
           //main.scope1 -> scope1
-          if(!fullScope.equals("main")) {
-            val onlyNewScope = fullScope.substring(fullScope.lastIndexOf(".")+1, fullScope.length)
+          if (!fullScope.equals("main")) {
+            val onlyNewScope = fullScope.substring(fullScope.lastIndexOf(".") + 1, fullScope.length)
             //If there's already a scope or set with this name, error out
-            if(currentMap("current").asInstanceOf[mutable.Map[String, Any]].contains(onlyNewScope))
+            if (currentMap("current").asInstanceOf[mutable.Map[String, Any]].contains(onlyNewScope))
               throw new RuntimeException("There is already a set or scope with this name.\nIf you want to access a scope and not create a new one, type the same scope name for both fields.")
             //Insert new map of maps into scope for (set name -> (obj name -> obj))
-            if(!mapInScope.contains(onlyNewScope)) {
+            if (!mapInScope.contains(onlyNewScope)) {
               mapInScope += (onlyNewScope -> mutable.Map[String, mutable.Map[String, Any]](setName -> mutable.Map[String, Any](stringAnyTuple._1 -> stringAnyTuple._2)))
             }
             mapInScope
@@ -319,7 +329,7 @@ object SetTheory:
             else {
               val set = mapInScope(setName).asInstanceOf[mutable.Map[String, Any]]
               if (set.contains(stringAnyTuple._1)) {
-                throw new RuntimeException("Failed to insert duplicate value " + stringAnyTuple._1 + " into set " + setName +".")
+                throw new RuntimeException("Failed to insert duplicate value " + stringAnyTuple._1 + " into set " + setName + ".")
               }
               else {
                 set += (stringAnyTuple._1 -> stringAnyTuple._2)
@@ -331,13 +341,13 @@ object SetTheory:
         case Check(firstSetName: Identifier, firstObjectName: Identifier) =>
           val setName = firstSetName.eval.asInstanceOf[String]
           val objectName = firstObjectName.eval.asInstanceOf[String]
-          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-          if(!mapInScope.contains(setName)){
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (!mapInScope.contains(setName)) {
             "Set " + setName + " does not exist."
           }
           else {
-            val set = mapInScope(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
-            if(set.contains(objectName))
+            val set = mapInScope(setName).asInstanceOf[mutable.Map[String, mutable.Map[String, Any]]]
+            if (set.contains(objectName))
               "Set " + setName + " does contain " + objectName + "."
             else {
               "Set " + setName + " does not contain " + objectName + "."
@@ -345,95 +355,95 @@ object SetTheory:
           }
 
         //Just a wrapper method that returns the name as a string
-        case Identifier(name:String) => name
+        case Identifier(name: String) => name
 
         //Deletes objectIdentifier from setIdentifier
         case Delete(setIdentifier: Identifier, objectIdentifier: Identifier) =>
           val setName = setIdentifier.eval.asInstanceOf[String]
           val objectName = objectIdentifier.eval.asInstanceOf[String]
-          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setName,currentMap("current").asInstanceOf[mutable.Map[String, Any]])
-          if(!mapInScope.contains(setName)) {
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setName, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (!mapInScope.contains(setName)) {
             return "Set " + setName + " does not exist. "
           }
           else {
-            val set = mapInScope(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
-            if(!set.contains(objectName))
+            val set = mapInScope(setName).asInstanceOf[mutable.Map[String, mutable.Map[String, Any]]]
+            if (!set.contains(objectName))
               return "Object " + objectName + " does not exist inside " + setName + "."
           }
-          val set = mapInScope(setName).asInstanceOf[mutable.Map[String,mutable.Map[String, Any]]]
+          val set = mapInScope(setName).asInstanceOf[mutable.Map[String, mutable.Map[String, Any]]]
           set -= objectName
           "Successful deletion of " + objectName + " from " + setName + "."
 
         //Union of 2 sets
-        case Union(setName1:Identifier, setName2:Identifier) =>
-          val setTuple = getExistingSets(setName1,setName2)
+        case Union(setName1: Identifier, setName2: Identifier) =>
+          val setTuple = getExistingSets(setName1, setName2)
           val unionSet = setTuple._1.union(setTuple._2)
           val immutableUnionMap = unionSet.toMap
           val newUnionMap = mutable.Map() ++ immutableUnionMap
           newUnionMap
 
         //Intersection of 2 sets
-        case Intersection(setName1:Identifier, setName2:Identifier) =>
-          val setTuple = getExistingSets(setName1,setName2)
+        case Intersection(setName1: Identifier, setName2: Identifier) =>
+          val setTuple = getExistingSets(setName1, setName2)
           val intersectionSet = setTuple._1.intersect(setTuple._2)
           val immutableIntersectionMap = intersectionSet.toMap
           val newIntersectionMap = mutable.Map() ++ immutableIntersectionMap
           newIntersectionMap
 
         //Symmetric Difference of 2 sets
-        case Symmetric(setName1:Identifier, setName2:Identifier) =>
-          val setTuple = getExistingSets(setName1,setName2)
+        case Symmetric(setName1: Identifier, setName2: Identifier) =>
+          val setTuple = getExistingSets(setName1, setName2)
           val symmetricSet = setTuple._1.diff(setTuple._2) union setTuple._2.diff(setTuple._1)
           val immutableIntersectionMap = symmetricSet.toMap
           val newSymmetricMap = mutable.Map() ++ immutableIntersectionMap
           newSymmetricMap
 
         //Difference of 2 sets
-        case Difference(setName1:Identifier, setName2:Identifier) =>
-          val setTuple = getExistingSets(setName1,setName2)
+        case Difference(setName1: Identifier, setName2: Identifier) =>
+          val setTuple = getExistingSets(setName1, setName2)
           val differenceSet = setTuple._1.diff(setTuple._2)
           val immutableDifferenceMap = differenceSet.toMap
           val newDifferenceMap = mutable.Map() ++ immutableDifferenceMap
           newDifferenceMap
 
         //Cartesian Product of 2 sets
-        case Product(setName1:Identifier, setName2:Identifier) =>
+        case Product(setName1: Identifier, setName2: Identifier) =>
           val secondSetName = setName2.eval.asInstanceOf[String]
           val firstSetName = setName1.eval.asInstanceOf[String]
-          val cartesianMap = mutable.Map[String,Any]()
+          val cartesianMap = mutable.Map[String, Any]()
           getExistingSets(setName1, setName2) //Checks if sets exist
           val firstSet = recursiveResolveScope(currentMap("current").asInstanceOf[mutable.Map[String, Any]], firstSetName)
           val secondSet = recursiveResolveScope(currentMap("current").asInstanceOf[mutable.Map[String, Any]], secondSetName)
-          for((k,v) <- firstSet) {
-            for((keys,values) <- secondSet)
-              cartesianMap += (k+keys -> (v, values))
+          for ((k, v) <- firstSet) {
+            for ((keys, values) <- secondSet)
+              cartesianMap += (k + keys -> (v, values))
           }
           cartesianMap
 
-        case Macro(name:Identifier, expression: ArithExp) =>
+        case Macro(name: Identifier, expression: ArithExp) =>
           //Overwrite macroMap
-          if(macroMap.contains(name.eval.asInstanceOf[String]))
+          if (macroMap.contains(name.eval.asInstanceOf[String]))
             return macroMap(name.eval.asInstanceOf[String]) = expression
           //New addition
           macroMap += (name.eval.asInstanceOf[String] -> expression)
 
-        case UseMacro(name:Identifier) =>
-          if(macroMap.contains(name.eval.asInstanceOf[String])) {
+        case UseMacro(name: Identifier) =>
+          if (macroMap.contains(name.eval.asInstanceOf[String])) {
             macroMap(name.eval.asInstanceOf[String]).eval
           }
-          else{
+          else {
             throw new RuntimeException("Macro doesn't exist.")
           }
 
         //Class operations
 
         case ClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any) =>
-          if(classMap.contains(className))
+          if (classMap.contains(className))
             throw new RuntimeException("Class " + className + " is already defined.")
-          for(method <- methods) {
-            if(method._2.eval == "abstract") {
+          for (method <- methods) {
+            if (method._2.eval == "abstract") {
               val arithArray = method._3.asInstanceOf[Array[ArithExp]]
-              if (arithArray.isEmpty){
+              if (arithArray.isEmpty) {
                 throw new RuntimeException("Cannot define abstract method in concrete class.")
               }
             }
@@ -452,7 +462,7 @@ object SetTheory:
 
         case NewObject(className: String, variableName: String) =>
           //Instantiate object by copying its class blueprint
-          val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,mutable.Map[String,mutable.Map[String,Any]]]]
+          val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String, mutable.Map[String, mutable.Map[String, Any]]]]
           //clone() is shallow copy so this sequence deep copies the class fields for each object instantiation.
           val objectBlueprintMap = classBlueprintMap.clone()
           val objectFieldMap = classBlueprintMap("fields").clone()
@@ -470,11 +480,11 @@ object SetTheory:
           val classParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
           val objectAbstractMap = objectBlueprintMap("methods")("abstract")
           //If there is no parent class, simply run the commands in the current constructor
-          if(classParentArray.isEmpty) {
+          if (classParentArray.isEmpty) {
             for (commands <- classConstructorArray) {
-              if(!objectPrivateFieldMap.contains(commands._1)) {
-                if(!objectPublicFieldMap.contains(commands._1)) {
-                  if(!objectProtectedFieldMap.contains(commands._1))
+              if (!objectPrivateFieldMap.contains(commands._1)) {
+                if (!objectPublicFieldMap.contains(commands._1)) {
+                  if (!objectProtectedFieldMap.contains(commands._1))
                     throw new RuntimeException("Field does not exist.")
                   else
                     objectProtectedFieldMap(commands._1) = commands._2
@@ -495,35 +505,35 @@ object SetTheory:
               val currentClassBlueprintMap = classMap(parentName).asInstanceOf[mutable.Map[String, Any]]
               val currentClassConstructorArray = currentClassBlueprintMap("constructor").asInstanceOf[Array[FieldAssign]]
               //Parent class's fields
-              val currentClassFieldMap = currentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String,Any]]]
+              val currentClassFieldMap = currentClassBlueprintMap("fields").asInstanceOf[mutable.Map[String, mutable.Map[String, Any]]]
               val currentClassPrivateFieldMap = currentClassFieldMap("private")
               val currentClassPublicFieldMap = currentClassFieldMap("public")
               val currentClassProtectedFieldMap = currentClassFieldMap("protected")
               //This is the child class's map; add all of its parent's public and protected fields into it
               //This implementation causes shadowing of fields in parent classes.
-              for(field <- currentClassPrivateFieldMap) {
+              for (field <- currentClassPrivateFieldMap) {
                 if (currentClassPrivateFieldMap.contains(field._1))
                   objectPrivateFieldMap(field._1) = field._2
                 else
                   objectPrivateFieldMap += (field._1 -> field._2)
               }
-              for(field <- currentClassPublicFieldMap) {
+              for (field <- currentClassPublicFieldMap) {
                 if (objectPublicFieldMap.contains(field._1))
                   objectPublicFieldMap(field._1) = field._2
                 else
                   objectPublicFieldMap += (field._1 -> field._2)
               }
-              for(field <- currentClassProtectedFieldMap) {
-                if(objectProtectedFieldMap.contains(field._1))
+              for (field <- currentClassProtectedFieldMap) {
+                if (objectProtectedFieldMap.contains(field._1))
                   objectProtectedFieldMap(field._1) = field._2
                 else
                   objectProtectedFieldMap += (field._1 -> field._2)
               }
               //Then run current constructor;
               for (commands <- currentClassConstructorArray) {
-                if(!objectPrivateFieldMap.contains(commands._1)) {
-                  if(!objectPublicFieldMap.contains(commands._1)) {
-                    if(!objectProtectedFieldMap.contains(commands._1))
+                if (!objectPrivateFieldMap.contains(commands._1)) {
+                  if (!objectPublicFieldMap.contains(commands._1)) {
+                    if (!objectProtectedFieldMap.contains(commands._1))
                       throw new RuntimeException("Field does not exist.")
                     else
                       objectProtectedFieldMap(commands._1) = commands._2
@@ -533,7 +543,7 @@ object SetTheory:
                 }
                 //Check if current class defines this private field. If not, error.
                 else {
-                  if(currentClassPrivateFieldMap.contains(commands._1))
+                  if (currentClassPrivateFieldMap.contains(commands._1))
                     objectPrivateFieldMap(commands._1) = commands._2
                   else
                     throw new RuntimeException("Tried to access private parent field")
@@ -543,9 +553,9 @@ object SetTheory:
             )
             //Child class
             for (commands <- classConstructorArray) {
-              if(!objectPrivateFieldMap.contains(commands._1)) {
-                if(!objectPublicFieldMap.contains(commands._1)) {
-                  if(!objectProtectedFieldMap.contains(commands._1)) {
+              if (!objectPrivateFieldMap.contains(commands._1)) {
+                if (!objectPublicFieldMap.contains(commands._1)) {
+                  if (!objectProtectedFieldMap.contains(commands._1)) {
                     throw new RuntimeException("Field does not exist.")
                   }
                   else
@@ -555,30 +565,29 @@ object SetTheory:
                   objectPublicFieldMap(commands._1) = commands._2
               }
               //Check if child object has private field in class def. If not, illegal access to private parent field.
+              else if (classPrivateFieldMap.contains(commands._1))
+                objectPrivateFieldMap(commands._1) = commands._2
               else
-                if(classPrivateFieldMap.contains(commands._1))
-                  objectPrivateFieldMap(commands._1) = commands._2
-                else
-                  throw new RuntimeException("Tried to access private parent field")
+                throw new RuntimeException("Tried to access private parent field")
             }
           }
           for (method <- objectAbstractMap) {
-            if(method._2.asInstanceOf[Array[ArithExp]].isEmpty)
+            if (method._2.asInstanceOf[Array[ArithExp]].isEmpty)
               throw new RuntimeException("Can't instantiate class that doesn't implement all abstract methods")
           }
 
 
         //Invokes an object's method
         case InvokeMethod(objectName: String, methodName: String) =>
-          if(!objectMap.contains(objectName))
+          if (!objectMap.contains(objectName))
             throw new RuntimeException("Object does not exist")
-          val objectBlueprintMap = objectMap(objectName).asInstanceOf[mutable.Map[String,Any]]
-          val objectMethodMap = objectBlueprintMap("methods").asInstanceOf[mutable.Map[String,Any]]
-          val objectPrivateMethodMap = objectMethodMap("private").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-          val objectPublicMethodMap = objectMethodMap("public").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-          val objectProtectedMethodMap = objectMethodMap("protected").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-          val objectAbstractMethodMap = objectMethodMap("abstract").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-          if(!checkCurrentClassForMethod(objectAbstractMethodMap, methodName)){
+          val objectBlueprintMap = objectMap(objectName).asInstanceOf[mutable.Map[String, Any]]
+          val objectMethodMap = objectBlueprintMap("methods").asInstanceOf[mutable.Map[String, Any]]
+          val objectPrivateMethodMap = objectMethodMap("private").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+          val objectPublicMethodMap = objectMethodMap("public").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+          val objectProtectedMethodMap = objectMethodMap("protected").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+          val objectAbstractMethodMap = objectMethodMap("abstract").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+          if (!checkCurrentClassForMethod(objectAbstractMethodMap, methodName)) {
             if (!checkCurrentClassForMethod(objectPublicMethodMap, methodName)) {
               if (!checkCurrentClassForMethod(objectPrivateMethodMap, methodName)) {
                 if (!checkCurrentClassForMethod(objectProtectedMethodMap, methodName)) {
@@ -596,18 +605,18 @@ object SetTheory:
               }
             }
           }
-          //If made it here, return global variable of last method
+        //If made it here, return global variable of last method
 
         //Interface and Abstract Class
 
         case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any) =>
-          if(classMap.contains(className))
+          if (classMap.contains(className))
             throw new RuntimeException("Class " + className + " is already defined.")
           classMap += recurseAddClassToMap(className, fields, constructor, methods, nestedC, nestedI)
           className
 
         case InterfaceDecl(interfaceName: String, fields: Array[Field], methods: Array[Method], nestedC: Any, nestedI: Any) =>
-          if(interfaceMap.contains(interfaceName))
+          if (interfaceMap.contains(interfaceName))
             throw new RuntimeException("Interface " + interfaceName + " is already defined.")
           interfaceMap += recurseAddInterfaceToMap(interfaceName, fields, methods, nestedC, nestedI)
           interfaceName
@@ -616,24 +625,24 @@ object SetTheory:
 
     //Helper method that creates the data structure in the readme. Used for indefinite nesting of classes.
     private def recurseAddClassToMap(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any): (String, mutable.Map[String, Any]) =
-      val methodAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](),
-        "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any](), "abstract" -> mutable.Map[String,Any]())
-      for(inner <- 0 to methods.length-2) {
-        if(methods.length>1) {
-          for(outer <- inner + 1 until methods.length) {
-            if(methods(inner)._1 == methods(outer)._1) {
+      val methodAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String, Any](),
+        "public" -> mutable.Map[String, Any](), "protected" -> mutable.Map[String, Any](), "abstract" -> mutable.Map[String, Any]())
+      for (inner <- 0 to methods.length - 2) {
+        if (methods.length > 1) {
+          for (outer <- inner + 1 until methods.length) {
+            if (methods(inner)._1 == methods(outer)._1) {
               throw new RuntimeException("Can't have duplicate method names")
             }
           }
         }
       }
-      for(method <- methods) {
-        methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
+      for (method <- methods) {
+        methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String, Any]] += (method._1 -> method._3)
       }
-      val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
-      for(field <- fields) {
-        fieldAccessMap(field._2.eval).asInstanceOf[mutable.Map[String,Any]] += (field._1 -> None)
-        if(field._2.eval == "abstract")
+      val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String, Any](), "public" -> mutable.Map[String, Any](), "protected" -> mutable.Map[String, Any]())
+      for (field <- fields) {
+        fieldAccessMap(field._2.eval).asInstanceOf[mutable.Map[String, Any]] += (field._1 -> None)
+        if (field._2.eval == "abstract")
           throw new RuntimeException("Can't have abstract fields.")
       }
       //If there is a nested class, add it under "nested" and evaluate it until no more nested.
@@ -692,6 +701,7 @@ object SetTheory:
                 )
           }
       }
+
     //"interface" -> Map("name" -> "interfaceName"
     //                   "fields" -> Map("private" -> Map("fieldName" -> Any)
     //                                   "public" -> Map("fieldName" -> Any)
@@ -704,25 +714,25 @@ object SetTheory:
     //                   "innerI" -> Map("interfaceName" -> interface)
     private def recurseAddInterfaceToMap(interfaceName: String, fields: Array[Field], methods: Array[Method], nestedC: Any, nestedI: Any): (String, mutable.Map[String, Any]) = {
       //Interface only has abstract methods.
-      val methodAccessMap = mutable.Map[String, Any]("abstract" -> mutable.Map[String,Any]())
-      for(inner <- 0 to methods.length-2) {
-        if(methods.length>1) {
-          for(outer <- inner + 1 until methods.length) {
-            if(methods(inner)._1 == methods(outer)._1) {
+      val methodAccessMap = mutable.Map[String, Any]("abstract" -> mutable.Map[String, Any]())
+      for (inner <- 0 to methods.length - 2) {
+        if (methods.length > 1) {
+          for (outer <- inner + 1 until methods.length) {
+            if (methods(inner)._1 == methods(outer)._1) {
               throw new RuntimeException("Can't have duplicate method names")
             }
           }
         }
       }
-      for(method <- methods) {
-        if(method._2.eval != "abstract")
+      for (method <- methods) {
+        if (method._2.eval != "abstract")
           throw new RuntimeException("Methods declared in an interface must be abstract.")
-        methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String,Any]] += (method._1 -> method._3)
+        methodAccessMap(method._2.eval).asInstanceOf[mutable.Map[String, Any]] += (method._1 -> method._3)
       }
-      val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String,Any](), "public" -> mutable.Map[String,Any](), "protected" -> mutable.Map[String,Any]())
-      for(field <- fields) {
-        fieldAccessMap(field._2.eval).asInstanceOf[mutable.Map[String,Any]] += (field._1 -> None)
-        if(field._2.eval == "abstract")
+      val fieldAccessMap = mutable.Map[String, Any]("private" -> mutable.Map[String, Any](), "public" -> mutable.Map[String, Any](), "protected" -> mutable.Map[String, Any]())
+      for (field <- fields) {
+        fieldAccessMap(field._2.eval).asInstanceOf[mutable.Map[String, Any]] += (field._1 -> None)
+        if (field._2.eval == "abstract")
           throw new RuntimeException("Can't have abstract fields.")
       }
       //If there is a nested class, add it under "nested" and evaluate it until no more nested.
@@ -780,10 +790,10 @@ object SetTheory:
     }
 
     //Helper method that checks for method in current class
-    private def checkCurrentClassForMethod(methodMap: mutable.Map[String, Array[ArithExp]], methodName: String) : Boolean =
-      for(method <- methodMap) {
-        if(method._1 == methodName) {
-          for(commands <- method._2) {
+    private def checkCurrentClassForMethod(methodMap: mutable.Map[String, Array[ArithExp]], methodName: String): Boolean =
+      for (method <- methodMap) {
+        if (method._1 == methodName) {
+          for (commands <- method._2) {
             commands.eval
           }
           return true
@@ -793,14 +803,14 @@ object SetTheory:
 
     //Helper method that goes from child class to oldest ancestor
     private def recurseClassHierarchy(className: String, methodName: String): Boolean =
-      val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String,Any]]
-      val classMethodMap = classBlueprintMap("methods").asInstanceOf[mutable.Map[String,Any]]
-      val classPublicMethodMap = classMethodMap("public").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-      val classProtectedMethodMap = classMethodMap("protected").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-      val classImplementedAbstractMethodMap = classMethodMap("abstract").asInstanceOf[mutable.Map[String,Array[ArithExp]]]
-      if(!checkCurrentClassForMethod(classPublicMethodMap, methodName)) {
-        if(!checkCurrentClassForMethod(classProtectedMethodMap, methodName)) {
-          if(!checkCurrentClassForMethod(classImplementedAbstractMethodMap, methodName)) {
+      val classBlueprintMap = classMap(className).asInstanceOf[mutable.Map[String, Any]]
+      val classMethodMap = classBlueprintMap("methods").asInstanceOf[mutable.Map[String, Any]]
+      val classPublicMethodMap = classMethodMap("public").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+      val classProtectedMethodMap = classMethodMap("protected").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+      val classImplementedAbstractMethodMap = classMethodMap("abstract").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+      if (!checkCurrentClassForMethod(classPublicMethodMap, methodName)) {
+        if (!checkCurrentClassForMethod(classProtectedMethodMap, methodName)) {
+          if (!checkCurrentClassForMethod(classImplementedAbstractMethodMap, methodName)) {
             val classParentArray = classBlueprintMap("parents").asInstanceOf[Array[String]]
             if (!classParentArray.isEmpty) {
               recurseClassHierarchy(classParentArray(0), methodName)
@@ -813,6 +823,8 @@ object SetTheory:
         }
       }
       true
+
+
 
 
   @main def createSetTheoryInputSession(): Unit =

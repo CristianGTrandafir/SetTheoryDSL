@@ -5,12 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import SetTheory.ArithExp.*
 import SetTheory.ArithExp
 import SetTheory.AccessModifier.*
+import SetTheory.IF
 import scala.collection.mutable
 import SetTheory.classMap
 import SetTheory.objectMap
 import SetTheory.setMap
 import SetTheory.interfaceMap
-//I made these 3 data structures public() so I could complete the testing cases.
+//I made these 4 data structures public so I could complete the testing cases.
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
 
@@ -431,4 +432,36 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     classMap("NormalDef1").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "ConcreteImplementer2"
   }
 
+  ///////////////////////////////////////////////////////////////////////////////HW4 Tests
+
+  //Test 30
+  behavior of "If statement with true condition"
+
+  it should "evaluate first clause" in {
+
+    Assign(Identifier("sampleSet"), Insert(Identifier("sampleVar"), Variable("Anything"))).eval
+
+    //Condition is true
+    IF(Check(Identifier("sampleSet"), Identifier("sampleVar")).eval == "Set " + "sampleSet" + " does contain " + "sampleVar" + ".",
+      Assign(Identifier("trueSet"), Insert(Identifier("trueVar"), Variable("Anything"))).eval,
+      Assign(Identifier("falseSet"), Insert(Identifier("falseVar"), Variable("Anything"))).eval,
+    )
+
+    Check(Identifier("trueSet"), Identifier("trueVar")).eval shouldBe "Set " + "trueSet" + " does contain " + "trueVar" + "."
+    Check(Identifier("falseSet"), Identifier("falseSet")).eval shouldBe "Set " + "falseSet" + " does not exist."
+  }
+
+  //Test 31
+  behavior of "If statement with false condition"
+
+  it should "evaluate second clause" in {
+
+    IF(false,
+      Assign(Identifier("trueSet2"), Insert(Identifier("trueVar"), Variable("Anything"))).eval,
+      Assign(Identifier("falseSet2"), Insert(Identifier("falseVar"), Variable("Anything"))).eval,
+    )
+
+    Check(Identifier("falseSet2"), Identifier("falseVar")).eval shouldBe "Set " + "falseSet2" + " does contain falseVar."
+    Check(Identifier("trueSet2"), Identifier("trueVar")).eval shouldBe "Set " + "trueSet2" + " does not exist" + "."
+  }
 }
