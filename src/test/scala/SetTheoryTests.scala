@@ -11,6 +11,8 @@ import SetTheory.classMap
 import SetTheory.objectMap
 import SetTheory.setMap
 import SetTheory.interfaceMap
+import SetTheory.exceptionMap
+import SetTheory.scopeWithExceptionMap
 //I made these 4 data structures public so I could complete the testing cases.
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
@@ -72,14 +74,14 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Assign(Identifier("set20"), Insert(Identifier("var2"), Variable(1))).eval
     Assign(Identifier("set10"), Insert(Identifier("var3"), Variable(1))).eval
     Assign(Identifier("set20"), Insert(Identifier("var4"), Variable(1))).eval
-    Scope(Identifier("newScope3"),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1)))).eval
+    Scope(Identifier("newScope3"),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))), 0).eval
     //set10 is in parent scope of set30. This should throw an error if it fails - success if program checks parent scopes.
-    Scope(Identifier("newScope3"),Identifier("main"), Union(Identifier("set10"), Identifier("set30"))).eval
-    Scope(Identifier("newScope3"),Identifier("main"), Check(Identifier("newScope3"), Identifier("set30"))).eval shouldBe "Set " + "newScope3" + " does contain " + "set30" + "."
-    Scope(Identifier("newScope3"),Identifier("main"), Delete(Identifier("newScope3"), Identifier("set30"))).eval shouldBe "Successful deletion of " + "set30" + " from " + "newScope3" + "."
+    Scope(Identifier("newScope3"),Identifier("main"), Union(Identifier("set10"), Identifier("set30")),0).eval
+    Scope(Identifier("newScope3"),Identifier("main"), Check(Identifier("newScope3"), Identifier("set30")),0).eval shouldBe "Set " + "newScope3" + " does contain " + "set30" + "."
+    Scope(Identifier("newScope3"),Identifier("main"), Delete(Identifier("newScope3"), Identifier("set30")),0).eval shouldBe "Successful deletion of " + "set30" + " from " + "newScope3" + "."
     //Anonymous scope
-    Scope(Identifier(""),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1)))).eval
-    Scope(Identifier(""),Identifier("main"), Check(Identifier(""), Identifier("set30"))).eval shouldBe "Set " + "" + " does contain " + "set30" + "."
+    Scope(Identifier(""),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))),0).eval
+    Scope(Identifier(""),Identifier("main"), Check(Identifier(""), Identifier("set30")),0).eval shouldBe "Set " + "" + " does contain " + "set30" + "."
   }
 
   //Test 7
@@ -87,11 +89,11 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "check if a nested scope contains a set" in {
     Assign(Identifier("set200"), Insert(Identifier("var2"), Variable(1))).eval
-    Scope(Identifier("newScope30"),Identifier("main"), Assign(Identifier("set200"), Insert(Identifier("var3"), Variable(1)))).eval
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Assign(Identifier("set300"), Insert(Identifier("var4"), Variable(1)))).eval
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300"))).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
+    Scope(Identifier("newScope30"),Identifier("main"), Assign(Identifier("set200"), Insert(Identifier("var3"), Variable(1))),0).eval
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Assign(Identifier("set300"), Insert(Identifier("var4"), Variable(1))),0).eval
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300")),0).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
     //newScope30 is in the parent scope of newScope40
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200"))).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
+    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200")),0).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
   }
 
   ///////////////////////////////////////////////////////////////////////////////HW2 Tests
@@ -464,4 +466,82 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Check(Identifier("falseSet2"), Identifier("falseVar")).eval shouldBe "Set " + "falseSet2" + " does contain falseVar."
     Check(Identifier("trueSet2"), Identifier("trueVar")).eval shouldBe "Set " + "trueSet2" + " does not exist" + "."
   }
+
+  //Test 32
+  behavior of "ExceptionClassDef"
+
+  it should "define exception in map" in {
+    ExceptionClassDef("testException", "field").eval
+    exceptionMap("testException") shouldBe "field"
+  }
+
+  //Test 33
+  behavior of "ExceptionClassDef"
+
+  it should "throw an error because of duplicate definition" in {
+    a [RuntimeException] should be thrownBy ExceptionClassDef("testException", "field").eval
+  }
+
+  //Test 34
+  behavior of "ThrowException"
+
+  it should "throw an error because of undefined exception" in {
+    val exception = the [RuntimeException] thrownBy ThrowException("testException2").eval
+    exception.getMessage should equal ("Can't throw exception that is undefined.")
+  }
+
+  //Test 35
+  behavior of "ThrowException"
+
+  it should "throw an error because catch isn't defined in any scope" in {
+    val exception = the [RuntimeException] thrownBy ThrowException("testException").eval
+    exception.getMessage should equal ("No catch block found.")
+  }
+
+  //Test 36
+  behavior of "CatchException"
+
+  it should "define a try/catch in the main scope" in {
+    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("set000"), Insert(Identifier("var4"), Variable(1))),
+      CatchException("testException",
+        Array[ArithExp](Assign(Identifier("try"), Insert(Identifier("tryVar"), Variable(1)))),
+          Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
+        )
+    ).eval
+    //What's stored in the main scope for the testException catch block should be the catch block Above (array of ArithExp commands)
+    scopeWithExceptionMap("main")("testException") shouldBe Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
+  }
+
+  //Test 37
+  behavior of "CatchException"
+
+  it should "throw an exception and catch it" in {
+    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("setter"), Insert(Identifier("var4"), Variable(1))),
+      CatchException("testException",
+        Array[ArithExp](Assign(Identifier("try2"), Insert(Identifier("tryVar2"), Variable(1))),
+          ThrowException("testException")),
+        Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
+      )
+    ).eval
+    //Command in the catch block should have instantiated set "catch"
+    Check(Identifier("main"), Identifier("catch")).eval shouldBe "Set " + "main" + " does contain " + "catch" + "."
+  }
+
+  //Test 38
+  behavior of "CatchException in parent scope"
+
+  it should "throw an exception in child scope and catch it in parent scope" in {
+    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("se"), Insert(Identifier("var4"), Variable(1))),
+      CatchException("testException",
+        Array[ArithExp](Assign(Identifier("try23"), Insert(Identifier("tryVar23"), Variable(1)))),
+        Array[ArithExp](Assign(Identifier("catchParent"), Insert(Identifier("catchVar"), Variable(1))))
+      )
+    ).eval
+
+    Scope(Identifier("test"),Identifier("main"), ThrowException("testException"), 0).eval
+
+    //Parent scope catch block should have instantiated set "catchParent"
+    Scope(Identifier("test"),Identifier("main"), Check(Identifier("test"), Identifier("catchParent")),0)
+  }
+
 }

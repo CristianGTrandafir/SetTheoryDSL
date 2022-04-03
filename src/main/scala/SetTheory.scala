@@ -1,12 +1,18 @@
 //Cristian Trandafir
 
 import SetTheory.AccessModifier.{Private, Protected, Public}
-import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InvokeMethod, Method, NewObject, InterfaceDecl}
+import SetTheory.ArithExp.{ClassDef, Constructor, Field, FieldAssign, InterfaceDecl, InvokeMethod, Method, NewObject, ThrowException}
 import sun.security.ec.point.ProjectivePoint.Mutable
+
 import scala.annotation.tailrec
 import scala.collection.mutable
 
 object SetTheory:
+  val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String,Array[ArithExp]]())
+  //"scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
+  //                  ("exceptionName2" -> Array[ArithExpCommands])
+  //"scopeName2" -> Map("exceptionName4" -> Array[ArithExpCommands])
+  val exceptionMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
   val interfaceMap: mutable.Map[String, Any] = mutable.Map[String, Any]()
   //"interface" -> Map("name" -> "interfaceName"
   //                   "parents" -> Array[parentClassNames] immediate parent first
@@ -84,7 +90,7 @@ object SetTheory:
     case Macro(name: Identifier, command: ArithExp)
     case UseMacro(name: Identifier)
     //Scope
-    case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp)
+    case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any)
     //Class
     case NewObject(className: String, variableName: String)
     case FieldAssign(fieldName: String, obj: Any)
@@ -97,6 +103,9 @@ object SetTheory:
     case AbstractClassDef(className: String, fields: Array[Field], constructor: Constructor, methods: Array[Method], nestedC: Any, nestedI: Any)
     case InterfaceDecl(interfaceName: String, fields: Array[Field], methods: Array[Method], nestedC: Any, nestedI: Any)
     //Exception Handling
+    case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp])
+    case ExceptionClassDef(exceptionName: String, field: String)
+    case ThrowException(exceptionName: String)
 
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
@@ -257,7 +266,7 @@ object SetTheory:
 
     def eval: Any =
       this match {
-        case Scope(newScope: Identifier, parentScope: Identifier, op3: ArithExp) =>
+        case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any) =>
           //Parent scope does not exist
           if (!scopeMap.contains(parentScope.eval.asInstanceOf[String]))
             throw new RuntimeException("Specified scope does not exist.")
@@ -275,7 +284,19 @@ object SetTheory:
           currentMap("current") = recursiveResolveScope(setMap, parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String])
           if (!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
             currentScope("current") = parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String]
-          val returnArithExp = op3.eval
+          val returnArithExp = command.eval
+
+          currentMap("current") = recursiveResolveScope(setMap, parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String])
+          if (!newScope.eval.asInstanceOf[String].equals(parentScope.eval.asInstanceOf[String]))
+            currentScope("current") = parentScope.eval.asInstanceOf[String] + "." + newScope.eval.asInstanceOf[String]
+
+          exception match {
+            case catchException: ArithExp.CatchException =>
+              catchException.eval
+            case _ =>
+              //Do nothing because no try/catch was passed into method
+          }
+
           //Reset so ArithExp commands without Scope in them don't get messed up.
           currentMap("current") = setMap
           currentScope("current") = "main"
@@ -621,6 +642,64 @@ object SetTheory:
           interfaceMap += recurseAddInterfaceToMap(interfaceName, fields, methods, nestedC, nestedI)
           interfaceName
 
+        case ExceptionClassDef(exceptionName: String, field: String) =>
+            if (exceptionMap.contains(exceptionName))
+              throw new RuntimeException("Can't define 2 exceptions with the same name")
+            else
+              exceptionMap.addOne(exceptionName, field)
+
+        case ThrowException(exceptionName: String) =>
+          if(!exceptionMap.contains(exceptionName))
+            throw new RuntimeException("Can't throw exception that is undefined.")
+          else
+            recurseCheckForException(exceptionName, currentScope("current"))
+
+        case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
+          scopeWithExceptionMap += (currentScope("current") -> mutable.Map(exceptionName -> catchBlock))
+          tryBlock.foreach { command =>
+              command.eval
+          }
+
+      }
+
+    //Helper method that recursively searches for a catch block in the scopeMap matching the exceptionName passed in
+    @tailrec
+    private def recurseCheckForException(exceptionName: String, scopeHierarchyString: String): Unit =
+      //If found in current scope, return true to go to catch
+      if(scopeWithExceptionMap.contains(scopeHierarchyString)) {
+        if (scopeWithExceptionMap(scopeHierarchyString).contains(exceptionName)) {
+          val catchCommands = scopeWithExceptionMap(scopeHierarchyString)(exceptionName)
+          catchCommands.foreach(command =>
+            command.eval
+          )
+        }
+        else {
+          if (!scopeHierarchyString.contains(".")) {
+            throw new RuntimeException("No catch block found.")
+          }
+        }
+      }
+      //If not found in current scope, recurse towards main.
+      else {
+        //We are in main scope
+        if (!scopeHierarchyString.contains(".")) {
+          if(scopeWithExceptionMap.contains(scopeHierarchyString)) {
+            if (!scopeWithExceptionMap(scopeHierarchyString).contains(exceptionName))
+              throw new RuntimeException("No catch block found.")
+            else {
+              val catchCommands = scopeWithExceptionMap(scopeHierarchyString)(exceptionName)
+              catchCommands.foreach(command =>
+                command.eval
+              )
+            }
+          }
+          else {
+            throw new RuntimeException("No catch block found.")
+          }
+        }
+        //Else main.scope1.scope2 turns to main.scope1
+        val reducedScopeString = scopeHierarchyString.substring(0, scopeHierarchyString.lastIndexOf("."))
+        recurseCheckForException(exceptionName, reducedScopeString)
       }
 
     //Helper method that creates the data structure in the readme. Used for indefinite nesting of classes.
