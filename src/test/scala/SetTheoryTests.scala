@@ -17,7 +17,7 @@ import SetTheory.scopeWithExceptionMap
 
 class SetTheoryTests extends AnyFlatSpec with Matchers {
 
-//////////////////////////////////////////////////////////////////////////////////HW1 Tests
+  //////////////////////////////////////////////////////////////////////////////////HW1 Tests
 
   //Test 1
   behavior of "my first language for set theory operations 1"
@@ -49,7 +49,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   it should "use Union on 2 sets" in {
     Assign(Identifier("someSetName"), Insert(Identifier("var"), Variable(1))).eval
     val testUnion = Union(Identifier("someSetName"), Identifier("someSetName2")).eval
-    val hash = Map[String, Any]("var" -> 1, "var2" ->1)
+    val hash = Map[String, Any]("var" -> 1, "var2" -> 1)
     testUnion shouldBe hash
   }
 
@@ -61,8 +61,8 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Assign(Identifier("set2"), Insert(Identifier("var2"), Variable(1))).eval
     Assign(Identifier("set1"), Insert(Identifier("var3"), Variable(1))).eval
     Assign(Identifier("set2"), Insert(Identifier("var4"), Variable(1))).eval
-    val p = Product(Identifier("set1"),Identifier("set2")).eval
-    val hash = Map[String, Any]("var3var2" -> (1,1), "var1var2" -> (1,1), "var3var4" -> (1,1), "var1var4" -> (1,1))
+    val p = Product(Identifier("set1"), Identifier("set2")).eval
+    val hash = Map[String, Any]("var3var2" -> (1, 1), "var1var2" -> (1, 1), "var3var4" -> (1, 1), "var1var4" -> (1, 1))
     p shouldBe hash
   }
 
@@ -74,14 +74,14 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Assign(Identifier("set20"), Insert(Identifier("var2"), Variable(1))).eval
     Assign(Identifier("set10"), Insert(Identifier("var3"), Variable(1))).eval
     Assign(Identifier("set20"), Insert(Identifier("var4"), Variable(1))).eval
-    Scope(Identifier("newScope3"),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))), 0).eval
+    Scope(Identifier("newScope3"), Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))), 0).eval
     //set10 is in parent scope of set30. This should throw an error if it fails - success if program checks parent scopes.
-    Scope(Identifier("newScope3"),Identifier("main"), Union(Identifier("set10"), Identifier("set30")),0).eval
-    Scope(Identifier("newScope3"),Identifier("main"), Check(Identifier("newScope3"), Identifier("set30")),0).eval shouldBe "Set " + "newScope3" + " does contain " + "set30" + "."
-    Scope(Identifier("newScope3"),Identifier("main"), Delete(Identifier("newScope3"), Identifier("set30")),0).eval shouldBe "Successful deletion of " + "set30" + " from " + "newScope3" + "."
+    Scope(Identifier("newScope3"), Identifier("main"), Union(Identifier("set10"), Identifier("set30")), 0).eval
+    Scope(Identifier("newScope3"), Identifier("main"), Check(Identifier("newScope3"), Identifier("set30")), 0).eval shouldBe "Set " + "newScope3" + " does contain " + "set30" + "."
+    Scope(Identifier("newScope3"), Identifier("main"), Delete(Identifier("newScope3"), Identifier("set30")), 0).eval shouldBe "Successful deletion of " + "set30" + " from " + "newScope3" + "."
     //Anonymous scope
-    Scope(Identifier(""),Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))),0).eval
-    Scope(Identifier(""),Identifier("main"), Check(Identifier(""), Identifier("set30")),0).eval shouldBe "Set " + "" + " does contain " + "set30" + "."
+    Scope(Identifier(""), Identifier("main"), Assign(Identifier("set30"), Insert(Identifier("var4"), Variable(1))), 0).eval
+    Scope(Identifier(""), Identifier("main"), Check(Identifier(""), Identifier("set30")), 0).eval shouldBe "Set " + "" + " does contain " + "set30" + "."
   }
 
   //Test 7
@@ -89,11 +89,11 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "check if a nested scope contains a set" in {
     Assign(Identifier("set200"), Insert(Identifier("var2"), Variable(1))).eval
-    Scope(Identifier("newScope30"),Identifier("main"), Assign(Identifier("set200"), Insert(Identifier("var3"), Variable(1))),0).eval
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Assign(Identifier("set300"), Insert(Identifier("var4"), Variable(1))),0).eval
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300")),0).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
+    Scope(Identifier("newScope30"), Identifier("main"), Assign(Identifier("set200"), Insert(Identifier("var3"), Variable(1))), 0).eval
+    Scope(Identifier("newScope40"), Identifier("main.newScope30"), Assign(Identifier("set300"), Insert(Identifier("var4"), Variable(1))), 0).eval
+    Scope(Identifier("newScope40"), Identifier("main.newScope30"), Check(Identifier("newScope40"), Identifier("set300")), 0).eval shouldBe "Set " + "newScope40" + " does contain " + "set300" + "."
     //newScope30 is in the parent scope of newScope40
-    Scope(Identifier("newScope40"),Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200")),0).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
+    Scope(Identifier("newScope40"), Identifier("main.newScope30"), Check(Identifier("newScope30"), Identifier("set200")), 0).eval shouldBe "Set " + "newScope30" + " does contain " + "set200" + "."
   }
 
   ///////////////////////////////////////////////////////////////////////////////HW2 Tests
@@ -104,17 +104,17 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   it should "define a new class, define a class that extends the first class, then instantiate an object" in {
 
     ClassDef("TestClass",
-      Array[Field](Field("a",Private()), Field("b", Public()), Field("c", Protected())),
+      Array[Field](Field("a", Private()), Field("b", Public()), Field("c", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))),
       Array[Method](Method("method1", Public(), Array[ArithExp](Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))),
         Method("method3", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0).eval
+      0, 0).eval
 
     ClassDef("TestClass2",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("c", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Extends "TestClass"
+      0, 0) Extends "TestClass"
 
     NewObject("TestClass2", "randomName2").eval
 
@@ -127,7 +127,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "invoking public() parent method"
 
   it should "invoke TestClass inherited method on TestClass2 object" in {
-    InvokeMethod("randomName2","method1").eval
+    InvokeMethod("randomName2", "method1").eval
     Check(Identifier("set15"), Identifier("var15")).eval shouldBe "Set set15 does contain var15."
   }
 
@@ -135,7 +135,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "invoking private() parent method"
 
   it should "throw a RuntimeException" in {
-    a [RuntimeException] should be thrownBy InvokeMethod("randomName2","method3").eval
+    a[RuntimeException] should be thrownBy InvokeMethod("randomName2", "method3").eval
   }
 
   //Test 11
@@ -143,12 +143,12 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "throw a RuntimeException" in {
     ClassDef("TestClass3",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       //Accesses private field "a" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("a", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Extends "TestClass"
-    a [RuntimeException] should be thrownBy NewObject("TestClass3", "randomName3").eval
+      0, 0) Extends "TestClass"
+    a[RuntimeException] should be thrownBy NewObject("TestClass3", "randomName3").eval
   }
 
   //Test 12
@@ -156,14 +156,14 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "set field b to 5000 in parent class" in {
     ClassDef("TestClass6",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       //Accesses public() field "b" in TestClass
       Constructor(Array[FieldAssign](FieldAssign("b", 5000))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Extends "TestClass"
+      0, 0) Extends "TestClass"
     NewObject("TestClass6", "object6").eval
     //object6's field b should be 5000
-    objectMap("object6").asInstanceOf[mutable.Map[String, mutable.Map[String,mutable.Map[String,Int]]]]("fields")("public")("b") shouldBe 5000
+    objectMap("object6").asInstanceOf[mutable.Map[String, mutable.Map[String, mutable.Map[String, Int]]]]("fields")("public")("b") shouldBe 5000
   }
 
   //Test 13
@@ -171,17 +171,17 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "create a nested class" in {
     ClassDef("TestClass4",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
       Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
       ClassDef("TestClass5",
-        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+        Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
         Constructor(Array[FieldAssign](FieldAssign("a", 5))),
         Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-        0,0)
-      ,0).eval
+        0, 0)
+      , 0).eval
     //Check if TestClass4 has reference to TestClass5 inside of it
-    classMap("TestClass4").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "TestClass5"
+    classMap("TestClass4").asInstanceOf[mutable.Map[String, Any]]("nestedC").asInstanceOf[(String, Any)]._1 shouldBe "TestClass5"
   }
   ///////////////////////////////////////////////////////////////////////////////HW3 Tests
 
@@ -190,11 +190,11 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "define an abstract class normally" in {
     AbstractClassDef("TestClassA",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
       //Abstract method with no body
       Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
-      0,0).eval
+      0, 0).eval
     classMap.contains("TestClassA") shouldBe true
   }
 
@@ -203,12 +203,12 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "throw an error when attempted to be instantiated" in {
     AbstractClassDef("TestClassB",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
       //Abstract method with no body
       Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
-      0,0).eval
-    a [RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
+      0, 0).eval
+    a[RuntimeException] should be thrownBy NewObject("TestClassB", "abstractInstantiation").eval
   }
 
   //Test 16
@@ -216,12 +216,12 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "throw an error when attempted to be defined" in {
 
-    a [RuntimeException] should be thrownBy ClassDef("TestClassD",
-                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                            Constructor(Array[FieldAssign](FieldAssign("d", 5))),
-                                            //Abstract method with no body
-                                            Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
-                                            0,0).eval
+    a[RuntimeException] should be thrownBy ClassDef("TestClassD",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("d", 5))),
+      //Abstract method with no body
+      Array[Method](Method("method2", Abstract(), Array[ArithExp]())),
+      0, 0).eval
   }
 
   //Test 17
@@ -229,21 +229,21 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "allow class that implements abstract method to be instantiated" in {
     AbstractClassDef("TestClassC",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("d", 5))),
       //Abstract method with no body
       Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp]())),
-      0,0).eval
+      0, 0).eval
 
     ClassDef("ConcreteImplementer",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       //Overridden abstract method
       Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setC"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Extends "TestClassC"
+      0, 0) Extends "TestClassC"
 
     NewObject("ConcreteImplementer", "ConcreteVar").eval
-    InvokeMethod("ConcreteVar","abstractMethod").eval
+    InvokeMethod("ConcreteVar", "abstractMethod").eval
 
     Check(Identifier("setC"), Identifier("var20")).eval shouldBe "Set setC does contain var20."
   }
@@ -253,10 +253,10 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "be declared normally" in {
     InterfaceDecl("TestInterface",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       //Default method
       Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
-      0,0).eval
+      0, 0).eval
 
     interfaceMap.contains("TestInterface") shouldBe true
   }
@@ -265,21 +265,21 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "Interface"
 
   it should "throw an error for defining non-abstract method" in {
-    a [RuntimeException] should be thrownBy InterfaceDecl("TestInterface1",
-                                              Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                              //Public method throws error
-                                              Array[Method](Method("abstractMethod", Public(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
-                                              0,0).eval
+    a[RuntimeException] should be thrownBy InterfaceDecl("TestInterface1",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      //Public method throws error
+      Array[Method](Method("abstractMethod", Public(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+      0, 0).eval
   }
 
   //Test 20
   behavior of "Interface implementing another interface"
 
   it should "throw an error for not using extends" in {
-    a [RuntimeException] should be thrownBy (InterfaceDecl("TestInterface1",
-                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                            Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
-                                            0,0) Implements "TestInterface")
+    a[RuntimeException] should be thrownBy (InterfaceDecl("TestInterface1",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+      0, 0) Implements "TestInterface")
   }
 
   //Test 21
@@ -287,13 +287,13 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "gain access to its methods" in {
     ClassDef("ConcreteImplementer2",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       //Implements abstract method
       Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Implements "TestInterface"
+      0, 0) Implements "TestInterface"
 
-    classMap("ConcreteImplementer2").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
+    classMap("ConcreteImplementer2").asInstanceOf[mutable.Map[String, Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
   }
 
   //Test 22
@@ -301,13 +301,13 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "throw an error due to not implementing the interface's abstract method" in {
     ClassDef("ConcreteImplementer3",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       //Doesn't implement abstract method
       Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Implements "TestInterface"
+      0, 0) Implements "TestInterface"
 
-    a [RuntimeException] should be thrownBy NewObject("ConcreteImplementer3", "randomName").eval
+    a[RuntimeException] should be thrownBy NewObject("ConcreteImplementer3", "randomName").eval
   }
 
   //Test 23
@@ -315,47 +315,47 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "nest multiple combinations of classes and interfaces" in {
     ClassDef("Nesting",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
       //Nested Class
       ClassDef("NestingClass1",
-        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+        Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
         Constructor(Array[FieldAssign](FieldAssign("e", 5))),
         Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
         0,
         //Nested Interface within a Nested Class
         InterfaceDecl("TestInterface2",
-          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
           Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
           0,
           0)
       ),
       //Nested Interface
       InterfaceDecl("TestInterface1",
-        Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+        Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
         Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
         //Nested Class within a Nested Interface
         ClassDef("NestingClass2",
-          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
           Constructor(Array[FieldAssign](FieldAssign("e", 5))),
           Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
           0,
           0),
         //Nested interface within a Nested Interface
         InterfaceDecl("TestInterface3",
-          Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+          Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
           Array[Method](Method("abstractMethod", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
           0,
           0)
       )
     ).eval
 
-    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "NestingClass1"
-    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedC").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface2"
-    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface1"
-    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedC").asInstanceOf[(String,Any)]._1 shouldBe "NestingClass2"
-    classMap("Nesting").asInstanceOf[mutable.Map[String,Any]]("nestedI").asInstanceOf[(String,mutable.Map[String,Any])]._2("nestedI").asInstanceOf[(String,Any)]._1 shouldBe "TestInterface3"
+    classMap("Nesting").asInstanceOf[mutable.Map[String, Any]]("nestedC").asInstanceOf[(String, Any)]._1 shouldBe "NestingClass1"
+    classMap("Nesting").asInstanceOf[mutable.Map[String, Any]]("nestedC").asInstanceOf[(String, mutable.Map[String, Any])]._2("nestedI").asInstanceOf[(String, Any)]._1 shouldBe "TestInterface2"
+    classMap("Nesting").asInstanceOf[mutable.Map[String, Any]]("nestedI").asInstanceOf[(String, Any)]._1 shouldBe "TestInterface1"
+    classMap("Nesting").asInstanceOf[mutable.Map[String, Any]]("nestedI").asInstanceOf[(String, mutable.Map[String, Any])]._2("nestedC").asInstanceOf[(String, Any)]._1 shouldBe "NestingClass2"
+    classMap("Nesting").asInstanceOf[mutable.Map[String, Any]]("nestedI").asInstanceOf[(String, mutable.Map[String, Any])]._2("nestedI").asInstanceOf[(String, Any)]._1 shouldBe "TestInterface3"
   }
 
   //Test 24
@@ -363,23 +363,23 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "work normally" in {
     InterfaceDecl("TestInterface5",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Array[Method](Method("random", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
-      0,0) Extends "TestInterface"
+      0, 0) Extends "TestInterface"
 
-    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String,Array[String]]]("parents")(0) shouldBe "TestInterface"
+    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String, Array[String]]]("parents")(0) shouldBe "TestInterface"
     //Checks if the interface has the "abstractMethod" that it should inherit from TestInterface
-    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String,mutable.Map[String,mutable.Map[String,Array[ArithExp]]]]]("methods")("abstract").contains("abstractMethod") shouldBe true
+    interfaceMap("TestInterface5").asInstanceOf[mutable.Map[String, mutable.Map[String, mutable.Map[String, Array[ArithExp]]]]]("methods")("abstract").contains("abstractMethod") shouldBe true
   }
 
   //Test 25
   behavior of "Interface Extending a Class"
 
   it should "throw an error" in {
-    a [RuntimeException] should be thrownBy (InterfaceDecl("TestInterface7",
-                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                            Array[Method](Method("random", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
-                                            0,0) Extends "ConcreteImplementer")
+    a[RuntimeException] should be thrownBy (InterfaceDecl("TestInterface7",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Method](Method("random", Abstract(), Array[ArithExp](Assign(Identifier("setI"), Insert(Identifier("varI"), Variable(1)))))),
+      0, 0) Extends "ConcreteImplementer")
 
 
   }
@@ -388,22 +388,22 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "Class Implementing a Class"
 
   it should "throw an error" in {
-    a [RuntimeException] should be thrownBy (ClassDef("TestClass10",
-                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                            Constructor(Array[FieldAssign](FieldAssign("c", 5))),
-                                            Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-                                            0,0) Implements "ConcreteImplementer")
+    a[RuntimeException] should be thrownBy (ClassDef("TestClass10",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0, 0) Implements "ConcreteImplementer")
   }
 
   //Test 27
   behavior of "Class Extending Itself"
 
   it should "throw an error" in {
-    a [RuntimeException] should be thrownBy (ClassDef("TestClass100",
-                                            Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
-                                            Constructor(Array[FieldAssign](FieldAssign("c", 5))),
-                                            Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
-                                            0,0) Extends "TestClass100")
+    a[RuntimeException] should be thrownBy (ClassDef("TestClass100",
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
+      Constructor(Array[FieldAssign](FieldAssign("c", 5))),
+      Array[Method](Method("method2", Private(), Array[ArithExp](Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1)))))),
+      0, 0) Extends "TestClass100")
   }
 
   //Test 28
@@ -411,13 +411,13 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "work normally" in {
     AbstractClassDef("AbstractClassImpl",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       //Doesn't implement abstract method
       Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Implements "TestInterface"
+      0, 0) Implements "TestInterface"
 
-    classMap("AbstractClassImpl").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
+    classMap("AbstractClassImpl").asInstanceOf[mutable.Map[String, Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "TestInterface"
   }
 
   //Test 29
@@ -425,13 +425,13 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "work normally" in {
     AbstractClassDef("NormalDef1",
-      Array[Field](Field("d",Private()), Field("e", Public()), Field("f", Protected())),
+      Array[Field](Field("d", Private()), Field("e", Public()), Field("f", Protected())),
       Constructor(Array[FieldAssign](FieldAssign("e", 5))),
       //Doesn't implement abstract method
       Array[Method](Method("concreteMethod", Public(), Array[ArithExp](Assign(Identifier("setIm"), Insert(Identifier("var20"), Variable(1)))))),
-      0,0) Extends "ConcreteImplementer2"
+      0, 0) Extends "ConcreteImplementer2"
 
-    classMap("NormalDef1").asInstanceOf[mutable.Map[String,Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "ConcreteImplementer2"
+    classMap("NormalDef1").asInstanceOf[mutable.Map[String, Any]]("parents").asInstanceOf[Array[String]](0) shouldBe "ConcreteImplementer2"
   }
 
   ///////////////////////////////////////////////////////////////////////////////HW4 Tests
@@ -479,34 +479,34 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "ExceptionClassDef"
 
   it should "throw an error because of duplicate definition" in {
-    a [RuntimeException] should be thrownBy ExceptionClassDef("testException", "field").eval
+    a[RuntimeException] should be thrownBy ExceptionClassDef("testException", "field").eval
   }
 
   //Test 34
   behavior of "ThrowException"
 
   it should "throw an error because of undefined exception" in {
-    val exception = the [RuntimeException] thrownBy ThrowException("testException2").eval
-    exception.getMessage should equal ("Can't throw exception that is undefined.")
+    val exception = the[RuntimeException] thrownBy ThrowException("testException2").eval
+    exception.getMessage should equal("Can't throw exception that is undefined.")
   }
 
   //Test 35
   behavior of "ThrowException"
 
   it should "throw an error because catch isn't defined in any scope" in {
-    val exception = the [RuntimeException] thrownBy ThrowException("testException").eval
-    exception.getMessage should equal ("No catch block found.")
+    val exception = the[RuntimeException] thrownBy ThrowException("testException").eval
+    exception.getMessage should equal("No catch block found.")
   }
 
   //Test 36
   behavior of "CatchException"
 
   it should "define a try/catch in the main scope" in {
-    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("set000"), Insert(Identifier("var4"), Variable(1))),
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("set000"), Insert(Identifier("var4"), Variable(1))),
       CatchException("testException",
         Array[ArithExp](Assign(Identifier("try"), Insert(Identifier("tryVar"), Variable(1)))),
-          Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
-        )
+        Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
+      )
     ).eval
     //What's stored in the main scope for the testException catch block should be the catch block Above (array of ArithExp commands)
     scopeWithExceptionMap("main")("testException") shouldBe Array[ArithExp](Assign(Identifier("catch"), Insert(Identifier("catchVar"), Variable(1))))
@@ -516,7 +516,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "CatchException"
 
   it should "throw an exception and catch it" in {
-    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("setter"), Insert(Identifier("var4"), Variable(1))),
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("setter"), Insert(Identifier("var4"), Variable(1))),
       CatchException("testException",
         Array[ArithExp](Assign(Identifier("try2"), Insert(Identifier("tryVar2"), Variable(1))),
           ThrowException("testException")),
@@ -531,17 +531,66 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "CatchException in parent scope"
 
   it should "throw an exception in child scope and catch it in parent scope" in {
-    Scope(Identifier("main"),Identifier("main"), Assign(Identifier("se"), Insert(Identifier("var4"), Variable(1))),
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("se"), Insert(Identifier("var4"), Variable(1))),
       CatchException("testException",
         Array[ArithExp](Assign(Identifier("try23"), Insert(Identifier("tryVar23"), Variable(1)))),
         Array[ArithExp](Assign(Identifier("catchParent"), Insert(Identifier("catchVar"), Variable(1))))
       )
     ).eval
 
-    Scope(Identifier("test"),Identifier("main"), ThrowException("testException"), 0).eval
+    Scope(Identifier("test"), Identifier("main"), ThrowException("testException"), 0).eval
 
     //Parent scope catch block should have instantiated set "catchParent"
-    Scope(Identifier("test"),Identifier("main"), Check(Identifier("test"), Identifier("catchParent")),0)
+    Check(Identifier("main"), Identifier("catchParent")).eval shouldBe "Set main does contain catchParent."
+  }
+
+  //Test 39
+  behavior of "CatchException"
+
+  it should "not execute the command after ThrowException" in {
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("s"), Insert(Identifier("var4"), Variable(1))),
+      CatchException("testException",
+        Array[ArithExp](
+          Assign(Identifier("t"), Insert(Identifier("t2"), Variable(1))),
+          ThrowException("testException"),
+          Assign(Identifier("afterThrow"), Insert(Identifier("tryVar2"), Variable(1)))
+        ),
+        Array[ArithExp](Assign(Identifier("catch2"), Insert(Identifier("catchVar"), Variable(1))))
+      )
+    ).eval
+    //Check that command before throws was executed
+    Check(Identifier("main"), Identifier("t")).eval shouldBe "Set " + "main" + " does contain " + "t" + "."
+    //Check that command after throws was not executed
+    Check(Identifier("main"), Identifier("afterThrow")).eval shouldBe "Set " + "main" + " does not contain " + "afterThrow" + "."
+  }
+
+  //Test 40
+  behavior of "CatchException calling ThrowException in catch block"
+
+  it should "propagate to parent scopes normally" in {
+    ExceptionClassDef("childException", "test").eval
+    ExceptionClassDef("parentException", "test").eval
+
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
+      CatchException("parentException",
+        Array[ArithExp](),
+        Array[ArithExp](Assign(Identifier("caughtFromChildCatch"), Insert(Identifier("catchVar"), Variable(1))))
+      )
+    ).eval
+
+
+    Scope(Identifier("nestedScope1"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
+      CatchException("childException",
+        //This try block will throw an exception that will be caught in current scope
+        Array[ArithExp](ThrowException("childException")),
+        //This catch block will catch the above exception then throw an exception that only the parent scope has registered
+        Array[ArithExp](ThrowException("parentException"))
+      )
+    ).eval
+
+
+    //Parent scope catch block should have instantiated set "caughtFromChildCatch"
+    Check(Identifier("main"), Identifier("caughtFromChildCatch")).eval shouldBe "Set main does contain caughtFromChildCatch."
   }
 
 }

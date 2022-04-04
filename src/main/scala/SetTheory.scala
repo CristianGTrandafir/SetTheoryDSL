@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object SetTheory:
-  val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String,Array[ArithExp]]())
+  val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String, Array[ArithExp]]())
   //"scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
   //                  ("exceptionName2" -> Array[ArithExpCommands])
   //"scopeName2" -> Map("exceptionName4" -> Array[ArithExpCommands])
@@ -50,10 +50,10 @@ object SetTheory:
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
 
   def IF(condition: => Boolean, thenClause: => Any, elseClause: => Any): Any =
-      if (condition)
-        thenClause
-      else
-        elseClause
+    if (condition)
+      thenClause
+    else
+      elseClause
 
   enum AccessModifier:
     case Private()
@@ -294,7 +294,7 @@ object SetTheory:
             case catchException: ArithExp.CatchException =>
               catchException.eval
             case _ =>
-              //Do nothing because no try/catch was passed into method
+            //Do nothing because no try/catch was passed into method
           }
 
           //Reset so ArithExp commands without Scope in them don't get messed up.
@@ -642,40 +642,60 @@ object SetTheory:
           interfaceMap += recurseAddInterfaceToMap(interfaceName, fields, methods, nestedC, nestedI)
           interfaceName
 
-        case ExceptionClassDef(exceptionName: String, field: String) =>
-            if (exceptionMap.contains(exceptionName))
-              throw new RuntimeException("Can't define 2 exceptions with the same name")
-            else
-              exceptionMap.addOne(exceptionName, field)
+        //Exceptions
 
+        //Defines a new exception type, unless one with the same name is already defined
+        case ExceptionClassDef(exceptionName: String, field: String) =>
+          if (exceptionMap.contains(exceptionName))
+            throw new RuntimeException("Can't define 2 exceptions with the same name")
+          else
+            exceptionMap.addOne(exceptionName, field)
+
+        //Throws an exception of a defined type
         case ThrowException(exceptionName: String) =>
-          if(!exceptionMap.contains(exceptionName))
+          if (!exceptionMap.contains(exceptionName))
             throw new RuntimeException("Can't throw exception that is undefined.")
           else
             recurseCheckForException(exceptionName, currentScope("current"))
 
+        //This is the try/catch abstraction.
+        // The current scope will get registered with the catch block and its exception type so that any exceptions thrown in it or its inner scopes will get caught
         case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
           scopeWithExceptionMap += (currentScope("current") -> mutable.Map(exceptionName -> catchBlock))
-          tryBlock.foreach { command =>
-              command.eval
-          }
+          executeCommands(tryBlock, 0, tryBlock.length)
 
       }
 
-    //Helper method that recursively searches for a catch block in the scopeMap matching the exceptionName passed in
+    //This helper method just executes each ArithExp command in either the try or catch block.
+    @tailrec
+    private def executeCommands(array: Array[ArithExp], index: Integer, max: Integer): Unit =
+      if (index < max) {
+        array(index).eval
+        if (array(index).isInstanceOf[ThrowException])
+          return None
+        executeCommands(array, index + 1, max)
+      }
+
+    //Helper method that recursively searches for a catch block in the scopeMap that is registered with the exceptionName passed in
     @tailrec
     private def recurseCheckForException(exceptionName: String, scopeHierarchyString: String): Unit =
-      //If found in current scope, return true to go to catch
-      if(scopeWithExceptionMap.contains(scopeHierarchyString)) {
+      if (scopeWithExceptionMap.contains(scopeHierarchyString)) {
         if (scopeWithExceptionMap(scopeHierarchyString).contains(exceptionName)) {
+          //Set commands to execute in the scope the catch block was found
+          currentScope("current") = scopeHierarchyString
+          currentMap("current") = recursiveResolveScope(setMap, scopeHierarchyString)
           val catchCommands = scopeWithExceptionMap(scopeHierarchyString)(exceptionName)
-          catchCommands.foreach(command =>
-            command.eval
-          )
+          executeCommands(catchCommands, 0, catchCommands.length)
         }
         else {
+          //In main, no more catch blocks
           if (!scopeHierarchyString.contains(".")) {
             throw new RuntimeException("No catch block found.")
+          }
+          //Recurse towards main
+          else {
+            val reducedScopeString = scopeHierarchyString.substring(0, scopeHierarchyString.lastIndexOf("."))
+            recurseCheckForException(exceptionName, reducedScopeString)
           }
         }
       }
@@ -683,14 +703,15 @@ object SetTheory:
       else {
         //We are in main scope
         if (!scopeHierarchyString.contains(".")) {
-          if(scopeWithExceptionMap.contains(scopeHierarchyString)) {
+          if (scopeWithExceptionMap.contains(scopeHierarchyString)) {
             if (!scopeWithExceptionMap(scopeHierarchyString).contains(exceptionName))
               throw new RuntimeException("No catch block found.")
             else {
+              //Set commands to execute in the scope the catch block was found
+              currentScope("current") = scopeHierarchyString
+              currentMap("current") = recursiveResolveScope(setMap, scopeHierarchyString)
               val catchCommands = scopeWithExceptionMap(scopeHierarchyString)(exceptionName)
-              catchCommands.foreach(command =>
-                command.eval
-              )
+              executeCommands(catchCommands, 0, catchCommands.length)
             }
           }
           else {
@@ -904,7 +925,25 @@ object SetTheory:
       true
 
 
-
-
   @main def createSetTheoryInputSession(): Unit =
     import ArithExp.*
+    ExceptionClassDef("childException", "test").eval
+    ExceptionClassDef("parentException", "test").eval
+
+    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
+      CatchException("parentException",
+        Array[ArithExp](),
+        Array[ArithExp](Assign(Identifier("caughtFromChildCatch"), Insert(Identifier("catchVar"), Variable(1))),
+          Assign(Identifier("caughtFromChildCatch"), Insert(Identifier("catchVar"), Variable(1))))
+      )
+    ).eval
+
+
+    Scope(Identifier("nestedScope1"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
+      CatchException("childException",
+        //This try block will throw an exception that will be caught in current scope
+        Array[ArithExp](ThrowException("childException")),
+        //This catch block will catch the above exception then throw an exception that only the parent scope has registered
+        Array[ArithExp](ThrowException("parentException"))
+      )
+    ).eval
