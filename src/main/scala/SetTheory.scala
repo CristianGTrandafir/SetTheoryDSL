@@ -49,6 +49,7 @@ object SetTheory:
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
 
+  //Call by name implementation of if
   def IF(condition: => Boolean, thenClause: => Any, elseClause: => Any): Any =
     if (condition)
       thenClause

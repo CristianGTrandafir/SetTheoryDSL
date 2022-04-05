@@ -578,7 +578,6 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       )
     ).eval
 
-
     Scope(Identifier("nestedScope1"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
       CatchException("childException",
         //This try block will throw an exception that will be caught in current scope
@@ -588,9 +587,18 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
       )
     ).eval
 
-
     //Parent scope catch block should have instantiated set "caughtFromChildCatch"
     Check(Identifier("main"), Identifier("caughtFromChildCatch")).eval shouldBe "Set main does contain caughtFromChildCatch."
+  }
+
+  //Test 41
+  behavior of "If statement with int instead of ArithExp in catch block"
+
+  it should "not compile" in {
+
+    //Condition is true
+    "IF(Check(Identifier('sampleSet''), Identifier('sampleVar')).eval,Assign(Identifier('trueSet''), Insert(Identifier('trueVar''), Variable('Anything''))).eval,0)" shouldNot compile
+
   }
 
 }

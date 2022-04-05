@@ -1,206 +1,120 @@
-# CS474Homework3
+# CS474Homework4
 Cristian Trandafir
-
-### New for Homework 3:
-
-I removed the readme text from HW1 and HW2 - they can be found under the HW1 and HW2 branches.
-I tried to include all the relevant details from the past readmes in this one.
 
 ##How to set up:
 
 Include the imports SetTheory.AccessModifier.\*, SetTheory.ArithExp.\*, and SetTheory.ArithExp at the top of your program.
-The first one, SetTheory.AccessModifiers.\*, is a new enum that you need to specify the access modifiers for fields and methods.
+The first one, SetTheory.AccessModifiers.\*, is an enum that you need to specify the access modifiers for fields and methods.
 The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
 The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-##How the new commands work:
+##How the commands work:
 
-####Old commands for reference:
+###Updated old commands:
 
-Field has 2 parameters. The first is a String for the name of the class field you want to define. The second is a String for the access modifier of the field you want to define - "public"/"private"/"protected".
+Scope has 4 parameters.
+The first is an Identifier* command for the scope name you want to create.
+The second is an Identifier* command for the scope hierarchy you want to create your new scope in.
+The third is an ArithExp command.
+The new fourth is an optional parameter for CatchException, which sets up the equivalent of a try/catch block and registers the scope to catch a thrown exception.
 
-Method has 3 parameters. The first is a String for the name of the method you want to define. The second is a String for the access modifier of the method you want to define - "public"/"private"/"protected". The third is an Array of ArithExp - you can input an arbitrary amount of commands from HW1 into the array to define the method body.
+\*Identifier has 1 parameter.
+It is simply a string that is used to name something.
 
-FieldAssign has 2 parameters. The first is a String that specifies the field name that you want to find. The second is any object you want to assign to that field.
+###New commands:
 
-Constructor has 1 parameter. It is an Array of FieldAssigns - you can input an arbitrary amount of FieldAssigns into the constructor body that will execute when NewObject is called.
+IF has 3 parameters. 
+The first is a boolean condition that is analogous to if(condition) in Java.
+The second is an ArithExp expression that will be lazily evaluated if the condition evaluates to true.
+The third is an ArithExp expression that will be lazily evaluated if the condition evaluates to fasle.
 
-####New commands:
+ExceptionClassDef has 2 parameters.
+The first is a string to name the exception class.
+The second is a string for the field of the exception class.
 
-Public, Private, Protected, Abstract.
-These are new elements of the AccessModifier enum.
-These should be specified in place of strings like "public", "private", "protected", and "abstract".
+ThrowException has 1 parameter.
+It is a string for the type of exception to throw.
 
-InterfaceDecl has 5 parameters.
-The first is a string to name the interface.
-The second is an Array of Fields.
-The third is an Array of Methods.
-The fourth is a nested ClassDef.
-The fifth is a nested InterfaceDecl.
+CatchException has 3 parameters.
+The first is a string for the exception to catch in the catch block.
+The second is an Array of ArithExp commands that will be lazily evaluated analogously to sequential execution of a try block.
+The third is an Array of ArithExp commands that will be lazily evaluated analogously to sequential execution of a catch block (provided that it catches a thrown exception).
 
-AbstractClassDef has 6 parameters.
-The first is a string to name the abstract class.
-The second is an Array of Fields.
-The third is a Constructor - it contains an Array of FieldAssigns.
-The fourth is an Array of Methods.
-The fifth is a nested ClassDef.
-The sixth is a nested InterfaceDecl.
+Information on other commands can be found in previous homeworks' readmes.
 
-Extends is an infix method. 
-It has been updated for to meet the new specs.
-An InterfaceDecl can Extend an already existing interface by specifying its name as a String.
-A ClassDef or AbstractClassDef can Extend an already existing ClassDef or AbstractClassDef by specifying its name as a String.
+##How IF and the Exceptions are implemented:
 
-Implements is a new infix method.
-It is used by ClassDefs or AbstractClassDefs to Implement an already existing interface by specifying its name as a String.
+All of the parameters to IF are call by name.
+IF functions like in any other language - it evaluates a condition to true or false, then executes the true block or false block of code depending on the condition value.
+Here is a sample usage of IF:
 
-Here is an example of a well-formed AbstractClassDef statement:
+    IF (
+ 
+        1+1 == 2,     //Boolean expression
 
-    AbstractClassDef("TestClass",
-        Array[Field](
-            Field("a","private"), Field("b", "public"), Field("c", "protected")
-            ),
-        Constructor(Array[FieldAssign](
-            FieldAssign("c", 5), FieldAssign("b", 10), FieldAssign("a", 0))
-            ),
-        Array[Method](
-            Method("method1", "public", Array[ArithExp](
-                Assign(Identifier("set15"), Insert(Identifier("var15"), Variable(1))), 
-                Macro(Identifier("testMacro"), Assign(Identifier("someSetName2"), Insert(Identifier("var2"), Variable(1)))))
-                ),
-            Method("method3", "private", Array[ArithExp](
-                Assign(Identifier("set20"), Insert(Identifier("var20"), Variable(1))))
-                )
-            ),
-        0, //Nested ClassDef can go here
-        1  //Nested InterfaceDecl can go here
-    ).eval
+        Assign(Identifier("trueSet"), Insert(Identifier("trueVar"), Variable(True))).eval, //True branch
 
-This statement can include nested ClassDefs in place of the 0, or nested InterfaceDecls in place of the 1.
-It can be postfixed with "Extends "ClassName"" or with "Implements "InterfaceName"".
+        Assign(Identifier("falseSet"), Insert(Identifier("falseVar"), Variable(False))).eval   //False branch
 
-##How the Classes and Interfaces are implemented:
+    )
 
-    "className" -> Map("name" -> "className"
+Because the expressions are lazily evaluated, calling .eval does nothing until the boolean expression is evaluated inside the function call and either the true or false branch runs.
 
-                   "parents" -> Array[parentClassNames] immediate parent first
+exceptionMap is a new variable that maps exceptions defined by ExceptionClassDef to their fields. 
+Calling ExceptionClassDef creates a new addition to this map, unless the exception name is already defined, in which case a RuntimeException is thrown to the user to use a different name.
 
-                   "constructor" -> Array[FieldAssign("fieldName",Any])
+scopeWithExceptionMap is a new variable that maps scopes to the exceptions they catch.
 
-                   "fields" -> Map("private" -> Map("fieldName" -> Any)
+    "scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
+                      ("exceptionName2" -> Array[ArithExpCommands])
+    "scopeName2" -> Map("exceptionName4" -> Array[ArithExpCommands])
 
-                                   "public" -> Map("fieldName" -> Any)
+Each scope is mapped to another map.
+This second map contains the exception names as keys and the catch blocks within the scope as values.
 
-                                   "protected" -> Map("fieldName" -> Any),
+Upon CatchException.eval, only the try block executes right away.
+Each CatchException definition "registers" a scope with an exceptionName and a catch block (each instance of "Array[ArithExpCommands]").
+The same scope can be registered with multiple exception types.
+Each exception type has its own catch block.
 
-                   "methods" -> Map("private" -> Map("methodName" -> Array[ArithExp])
+ThrowException throws an exception from the exceptionMap (test 34 shows the RuntimeException thrown if exception is not defined in exceptionMap).
+Once the exception is thrown in a scope, the helper method recurseCheckForException is called.
+The helper method checks the current scope for a catch block of the specified exception, then recursively checks each parent scope until it reaches the main scope (final scope level).
+If the exception is still not handled after main is checked, a RuntimeException is thrown to the user (test 35).
+Test 38 showcase throwing an exception from a nested scope.
 
-                                    "public" -> Map("methodName" -> Array[ArithExp])
+There is also another helper method, executeCommands that is called whenever a try or catch block executes.
+It recursively calls itself and evals each command, until a ThrowException is matched.
+If ThrowException is identified, then the helper method executes the ThrowException and returns (test 39).
+This means that commands after any ThrowException don't get executed.
+This means that both try and catch blocks can throw exceptions (test 40) and operate like in Java.
 
-                                    "protected" -> Map("methodName" -> Array[ArithExp])
-                                    
-                                    "abstract" -> Map("methodName" -> Array[ArithExp])
+Here is a sample of all 3 exception enums:
 
-                   "nestedC" -> Map("className" -> classDef)
+    1 ExceptionClassDef("testException", "field")
+    2 Scope(Identifier("main"), Identifier("main"), Assign(Identifier("se"), Insert(Identifier("var4"), Variable(1))),
+    3     CatchException("testException",
+    4     Array[ArithExp](Assign(Identifier("try23"), Insert(Identifier("tryVar23"), Variable(1)))),
+    5     Array[ArithExp](Assign(Identifier("catchParent"), Insert(Identifier("catchVar"), Variable(1))))
+    6     )
+    7 ).eval
+    8 Scope(Identifier("test"), Identifier("main"), ThrowException("testException"), 0).eval
 
-                   "nestedI" -> Map("interfaceName" -> interfaceDecl) 
+The first line is a definition of testException.
+The second line is the HW1 Scope definition.
+The third line is the start of the CatchException parameter to Scope, containing the exception name to catch.
+The fourth line is the try block.
+The fifth line is the catch block.
+The eighth line is throwing an exception from a parent scope ("main.test").
 
-This is the ClassDef data structure.
-One new addition is that support for nested Interfaces has been added.
-The AbstractClassDef data structure is identical to this.
-The InterfaceDecl data structure lacks the constructor field, and it can only have abstract methods, but it is otherwise identical.
-
-###How abstract methods work:
-
-Abstract is an element of the AccessModifier enum. 
-It works just like the other access modifiers.
-But there are additional checks within the code. 
-
-In case 1, an abstract method is defined with no body. 
-This means that the current class or interface doesn't provide a default implementation for the method.
-This means that if the current class has an abstract method with no body, the class cannot be instantiated.
-In order to be instantiated, the current class must provide their own (nonempty) definition for the abstract method with the AccessModifier type Abstract and the same method name - 
-this is effectively "overriding" the parent's abstract method.
-
-In case 2, an abstract method is defined with a body.
-This means that there is a default implementation for it.
-Any class that extends or implements this method does not need to provide their own definition for the method.
-Hence, they can be instantiated normally.
-
-##Questions:
-
-####Can a class/interface inherit from itself?
-
-No.
-There is a check in Extends and Implements that prevents this from happening. 
-See Test 27.
-This would not break anything in my implementation, 
-but I disallowed it because it's more likely that the user of my language doesn't want to extend the exact same class - after all, it's pointless.
-
-####Can an interface inherit from an abstract class with all pure methods?
-
-No.
-I did not allow interfaces to Extends classes, only other interfaces.
-See Test 25.
-This is because my abstract classes include constructors, so having an interface Extends it would be awkward.
-I would have had to ignore the constructor and include a check that all of the abstract class's methods are pure.
-I don't think many users will want to do this so I disallowed it.
-
-####Can an interface implement another interface?
-
-No.
-The documentation said this should throw an error.
-See Test 20.
-Although the documentation said it should throw an error, Extends and Implements are functionally the same in my code.
-I could have let interfaces Implements other interfaces instead of Extends them because NewObject and MethodInvocation handle the instantiation and method logic.
-Extends and Implements mainly update the parent array (my version of a vtable) to hold the parent class's name.
-
-####Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
-
-No.
-I only allowed classes to Implements a single interface.
-If a parent and grandparent interface contain the same method with the same signature, then the parent's method shadows the grandparent's method.
-This is how I implemented methods generally in HW2.
-A class cannot Extends 2 classes or Implements 2 interfaces so no problems with diamond inheritance arise.
-This is a serious limitation since most languages have some version of multiple inheritance.
-But I didn't want to implement multiple inheritance because of all the extra bugs that come with it.
-
-####Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
-
-Yes. 
-The most recently defined method will simply shadow the parent methods.
-This was the easiest resolution to implement.
-
-####Can an abstract class implement interfaces?
-
-Yes.
-See Test 28.
-I didn't foresee any complications by doing this so I allowed it.
-Neither abstract class nor interface can be instantiated.
-
-####Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
-
-Classes can only implement 1 interface.
-I did not include the return type as part of the method signature, so can method in a child class with the same name and AccessModifier will shadow the method in the parent class.
-
-####Can an abstract class inherit from a concrete class?
-
-Yes.
-There is no restriction on this because I allowed abstract classes to have public, private, and protected methods, as well as constructors.
-See Test 29.
-
-####Can an abstract class/interface be instantiated as anonymous concrete classes?
-
-No.
-I am inexperienced with anonymous classes so I'm not sure how they work or how I would implement them.
+The program will throw the exception, check the current scope ("main.test") to see if it's registered to an exception and catch block, fail, then check the parent scope ("main") for the exception and catch block, succeed, then execute main's testException catch block.
 
 ##Limitations
 
-The biggest limitation is that classes cannot Implements multiple interfaces. 
-Neither can classes Extends multiple classes.
-So there is no mechanism for multiple inheritance in my language.
-This will likely be a huge downside for my users.
+I designed the IF statement to only take in 1 ArithExp expression for the true branch and for the false branch.
+This would be inconvenient to users of the language who want to include multiple statements in the branches.
+I did this not for any design considerations, but to get myself familiar with the => operator in function calls.
+I researched and found that you can't mix varargs with call by name in Scala.
 
-Another limitation is that classes and interfaces can't have multiple nested classes on the same level.
-Classes and interfaces can indefinitely nest within other classes and interfaces, but there cannot be 2 classes or 2 interfaces at the same level.
-This could be fixed by creating an Array of nested classes and interfaces, but it would have complicated the code for not much more functionality.
+Note to the grader: I made various data structures that should be private public so that I could easily reference them in the Scalatests. 
+They are: classMap, objectMap, setMap, interfaceMap, exceptionMap, and scopeWithExceptionMap.
