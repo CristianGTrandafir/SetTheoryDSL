@@ -7,6 +7,9 @@ import sun.security.ec.point.ProjectivePoint.Mutable
 import scala.annotation.tailrec
 import scala.collection.mutable
 
+trait SetExpression:
+  def map(f: SetExpression => SetExpression): SetExpression
+
 object SetTheory:
   val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String, Array[ArithExp]]())
   //"scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
@@ -48,6 +51,9 @@ object SetTheory:
   private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("current" -> "main")
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
+
+  def partialEvalStatement(statement: ArithExp): ArithExp =
+    statement
 
   //Call by name implementation of if
   def IF(condition: => Boolean, thenClause: => Any, elseClause: => Any): Any =
@@ -107,7 +113,7 @@ object SetTheory:
     case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp])
     case ExceptionClassDef(exceptionName: String, field: String)
     case ThrowException(exceptionName: String)
-
+    //Partial Evaluation
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
@@ -266,6 +272,7 @@ object SetTheory:
 
 
     def eval: Any =
+
       this match {
         case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any) =>
           //Parent scope does not exist
