@@ -603,6 +603,33 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   ///////////////////////////////////////////////////////////////////////////////HW5 Tests
 
+  //Test 42
+  behavior of "Partial evaluation of Delete"
 
+  it should "be equal to pEvalDelete" in {
+    Delete(Identifier("RandomUndefinedVariable"), Identifier("RandomUndefinedSet")).eval shouldBe pEvalDelete("RandomUndefinedVariable", "RandomUndefinedSet").eval
+  }
+
+  //Test 43
+  behavior of "Partial evaluation of Union first parameter"
+
+  it should "be equal to pEvalUnion" in {
+    Assign(Identifier("realSet"), Insert(Identifier("var"), Variable(1))).eval
+    Union(Identifier("RandomUndefinedSet1"), Identifier("realSet")).eval shouldBe pEvalUnion("RandomUndefinedSet1", Identifier("realSet")).eval
+  }
+
+  //Test 44
+  behavior of "Partial evaluation of Union second parameter"
+
+  it should "be equal to pEvalUnion" in {
+    Union(Identifier("realSet"), Identifier("RandomUndefinedSet2")).eval shouldBe pEvalUnion(Identifier("realSet"), "RandomUndefinedSet2").eval
+  }
+
+  //Test 45
+  behavior of "Partial evaluation of Union both parameters"
+
+  it should "be equal to pEvalUnion" in {
+    Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet4")).eval shouldBe pEvalUnion("RandomUndefinedSet3", "RandomUndefinedSet4").eval
+  }
 
 }

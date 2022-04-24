@@ -11,6 +11,8 @@ trait SetExpression:
   def map(f: SetExpression => SetExpression): SetExpression
 
 object SetTheory:
+  //"Global" variable that gets assigned to partially evaluated ArithExp and is returned by eval in case method partialEvalCheck returns true
+  private val partialEvalReturn: mutable.ListBuffer[ArithExp] = mutable.ListBuffer[ArithExp](ArithExp.Variable("AnyName"))
   val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String, Array[ArithExp]]())
   //"scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
   //                  ("exceptionName2" -> Array[ArithExpCommands])
@@ -114,6 +116,18 @@ object SetTheory:
     case ExceptionClassDef(exceptionName: String, field: String)
     case ThrowException(exceptionName: String)
     //Partial Evaluation
+    case pEvalScope(newScope: Any, parentScope: Any, command: ArithExp, exception: Any)
+    case pEvalDelete(setIdentifier: Any, objectIdentifier: Any)
+    case pEvalUnion(setName1: Any, setName2: Any)
+    case pEvalIntersection(setName1: Any, setName2: Any)
+    case pEvalSymmetric(setName1: Any, setName2: Any)
+    case pEvalDifference(setName1: Any, setName2: Any)
+    case pEvalProduct(setName1: Any, setName2: Any)
+    case pEvalUseMacro(name: Any)
+    case pEvalNewObject(className: Any, variableName: Any)
+    case pEvalInvokeMethod(objectName: Any, methodName: Any)
+    case pEvalThrowException(exceptionName: Any)
+    case pEvalCatchException(exceptionName: Any, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp])
 
     //Helper method that returns a tuple containing 2 sets to the set operation functions in eval
     private def getExistingSets(setName1: Identifier, setName2: Identifier): (Set[(String, Any)], Set[(String, Any)]) =
@@ -270,10 +284,237 @@ object SetTheory:
           throw new RuntimeException("Only classes and interfaces can use Extends.")
       }
 
+    //Private method that returns true if statement can be partially evaluated
+    private def partialEvalCheck(statement: ArithExp): Boolean =
+      partialEvalReturn.clear()
+      statement match {
+
+        case Delete(setIdentifier: Identifier, objectIdentifier: Identifier) =>
+          val setString = setIdentifier.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val objectString = objectIdentifier.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), setString, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(setString)) {
+            return false
+          }
+          partialEvalReturn.addOne(pEvalDelete(setString, objectString))
+          true
+
+        case Union(setName1: Identifier, setName2: Identifier) =>
+          val set1String = setName1.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val set2String = setName2.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set1String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          val mapInScope2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set2String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(set1String)) {
+            //Neither are partially evaluated
+            if (mapInScope2.contains(set2String))
+              false
+            //setName2 is partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalUnion(setName1, set2String))
+              true
+            }
+          }
+          else {
+            //setName1 is partially evaluated
+            if (mapInScope2.contains(set2String)) {
+              partialEvalReturn.addOne(pEvalUnion(set1String, setName2))
+              true
+            } //Both are partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalUnion(set1String, set2String))
+              true
+            }
+          }
+
+        case Intersection(setName1: Identifier, setName2: Identifier) =>
+          val set1String = setName1.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val set2String = setName2.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set1String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          val mapInScope2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set2String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(set1String)) {
+            //Neither are partially evaluated
+            if (mapInScope2.contains(set2String))
+              false
+            //setName2 is partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalIntersection(setName1, set2String))
+              true
+            }
+          }
+          else {
+            //setName1 is partially evaluated
+            if (mapInScope2.contains(set2String)) {
+              partialEvalReturn.addOne(pEvalIntersection(set1String, setName2))
+              true
+            } //Both are partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalIntersection(set1String, set2String))
+              true
+            }
+          }
+
+        case Symmetric(setName1: Identifier, setName2: Identifier) =>
+          val set1String = setName1.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val set2String = setName2.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set1String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          val mapInScope2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set2String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(set1String)) {
+            //Neither are partially evaluated
+            if (mapInScope2.contains(set2String))
+              false
+            //setName2 is partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalSymmetric(setName1, set2String))
+              true
+            }
+          }
+          else {
+            //setName1 is partially evaluated
+            if (mapInScope2.contains(set2String)) {
+              partialEvalReturn.addOne(pEvalSymmetric(set1String, setName2))
+              true
+            } //Both are partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalSymmetric(set1String, set2String))
+              true
+            }
+          }
+
+        case Difference(setName1: Identifier, setName2: Identifier) =>
+          val set1String = setName1.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val set2String = setName2.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set1String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          val mapInScope2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set2String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(set1String)) {
+            //Neither are partially evaluated
+            if (mapInScope2.contains(set2String))
+              false
+            //setName2 is partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalDifference(setName1, set2String))
+              true
+            }
+          }
+          else {
+            //setName1 is partially evaluated
+            if (mapInScope2.contains(set2String)) {
+              partialEvalReturn.addOne(pEvalDifference(set1String, setName2))
+              true
+            } //Both are partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalDifference(set1String, set2String))
+              true
+            }
+          }
+        case Product(setName1: Identifier, setName2: Identifier) =>
+          val set1String = setName1.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val set2String = setName2.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val mapInScope = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set1String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          val mapInScope2 = resolveScopeToMain(currentMap("current").asInstanceOf[mutable.Map[String, Any]], currentScope("current"), set2String, currentMap("current").asInstanceOf[mutable.Map[String, Any]])
+          if (mapInScope.contains(set1String)) {
+            //Neither are partially evaluated
+            if (mapInScope2.contains(set2String))
+              false
+            //setName2 is partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalProduct(setName1, set2String))
+              true
+            }
+          }
+          else {
+            //setName1 is partially evaluated
+            if (mapInScope2.contains(set2String)) {
+              partialEvalReturn.addOne(pEvalProduct(set1String, setName2))
+              true
+            } //Both are partially evaluated
+            else {
+              partialEvalReturn.addOne(pEvalProduct(set1String, set2String))
+              true
+            }
+          }
+        case UseMacro(name: Identifier) =>
+          val macroString = name.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          if (macroMap.contains(macroString))
+            return false
+          partialEvalReturn.addOne(pEvalUseMacro(macroString))
+          true
+        case NewObject(className: String, variableName: String) =>
+          val objectString = className.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          if (classMap.contains(objectString))
+            return false
+          partialEvalReturn.addOne(pEvalNewObject(objectString, variableName))
+          true
+        case ThrowException(exceptionName: String) =>
+          val exceptionString = exceptionName.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          if (exceptionMap.contains(exceptionString))
+            return false
+          partialEvalReturn.addOne(pEvalThrowException(exceptionString))
+          true
+        case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any) =>
+          val nScope = newScope.asInstanceOf[Identifier]
+          val pScope = parentScope.asInstanceOf[Identifier]
+          //No partial eval of newScope
+          if (scopeMap.contains(nScope.eval.asInstanceOf[String])) {
+            //No partial eval of parentScope
+            if (scopeMap.contains(pScope.eval.asInstanceOf[String])) {
+              false
+            }
+            //Partial eval of parentScope
+            else {
+              true
+            }
+          }
+          //Check for partial eval of newScope or for newScope and parentScope
+          else {
+            //Partial eval of newScope
+            if (scopeMap.contains(pScope.eval.asInstanceOf[String])) {
+              false
+            }
+            //Partial eval of newScope and parentScope
+            else {
+              true
+            }
+          }
+        case InvokeMethod(objectName: String, methodName: String) =>
+          false
+        case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
+          false
+        case _ =>
+          false
+      }
 
     def eval: Any =
 
+      if(partialEvalCheck(this))
+        return partialEvalReturn.head
+
       this match {
+
+        case pEvalScope(newScope: Any, parentScope: Any, command: ArithExp, exception: Any) =>
+          this
+        case pEvalDelete(setIdentifier: Any, objectIdentifier: Any) =>
+          this
+        case pEvalUnion(setName1: Any, setName2: Any) =>
+          this
+        case pEvalIntersection(setName1: Any, setName2: Any) =>
+          this
+        case pEvalSymmetric(setName1: Any, setName2: Any) =>
+          this
+        case pEvalDifference(setName1: Any, setName2: Any) =>
+          this
+        case pEvalProduct(setName1: Any, setName2: Any) =>
+          this
+        case pEvalUseMacro(name: Any) =>
+          this
+        case pEvalNewObject(className: Any, variableName: Any) =>
+          this
+        case pEvalInvokeMethod(objectName: Any, methodName: Any) =>
+          this
+        case pEvalThrowException(exceptionName: Any) =>
+          this
+        case pEvalCatchException(exceptionName: Any, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
+          this
+
         case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any) =>
           //Parent scope does not exist
           if (!scopeMap.contains(parentScope.eval.asInstanceOf[String]))
@@ -935,23 +1176,3 @@ object SetTheory:
 
   @main def createSetTheoryInputSession(): Unit =
     import ArithExp.*
-    ExceptionClassDef("childException", "test").eval
-    ExceptionClassDef("parentException", "test").eval
-
-    Scope(Identifier("main"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
-      CatchException("parentException",
-        Array[ArithExp](),
-        Array[ArithExp](Assign(Identifier("caughtFromChildCatch"), Insert(Identifier("catchVar"), Variable(1))),
-          Assign(Identifier("caughtFromChildCatch"), Insert(Identifier("catchVar"), Variable(1))))
-      )
-    ).eval
-
-
-    Scope(Identifier("nestedScope1"), Identifier("main"), Assign(Identifier("Not important"), Insert(Identifier("NA"), Variable(1))),
-      CatchException("childException",
-        //This try block will throw an exception that will be caught in current scope
-        Array[ArithExp](ThrowException("childException")),
-        //This catch block will catch the above exception then throw an exception that only the parent scope has registered
-        Array[ArithExp](ThrowException("parentException"))
-      )
-    ).eval
