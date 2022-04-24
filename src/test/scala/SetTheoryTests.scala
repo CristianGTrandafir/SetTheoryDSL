@@ -632,4 +632,29 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet4")).eval shouldBe pEvalUnion("RandomUndefinedSet3", "RandomUndefinedSet4").eval
   }
 
+  //My eval returns Any, not ArithExp because of HW1 and HW2 commits. Hence the casting.
+  //Test 46
+  behavior of "Map with UnionTransformer function"
+
+  it should "simplify a partially evaluated Union that has 2 sets with the same name" in {
+    Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalUnion]
+      .map(e=>e.asInstanceOf[ArithExp].unionTransformer) shouldBe Variable("RandomUndefinedSet3")
+  }
+
+  //Test 47
+  behavior of "Map with IntersectionTransform function"
+
+  it should "simplify a partially evaluated Intersection that has 2 sets with the same name" in {
+    Intersection(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalIntersection]
+      .map(e=>e.asInstanceOf[ArithExp].IntersectionTransformer) shouldBe Variable("RandomUndefinedSet3")
+  }
+
+  //Test 48
+  behavior of "Map with DifferenceTransformer function"
+
+  it should "simplify a partially evaluated Difference that has 2 sets with the same name" in {
+    Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalDifference]
+      .map(e=>e.asInstanceOf[ArithExp].IntersectionTransformer) shouldBe Variable(mutable.Map[String, Any]("RandomUndefinedSet3" -> None))
+  }
+
 }

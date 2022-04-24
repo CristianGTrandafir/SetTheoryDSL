@@ -7,10 +7,8 @@ import sun.security.ec.point.ProjectivePoint.Mutable
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-trait SetExpression:
-  def map(f: SetExpression => SetExpression): SetExpression
-
 object SetTheory:
+  private val partialEvalIFReturn: mutable.ListBuffer[Any] = mutable.ListBuffer[Any](IF(true, true, true))
   //"Global" variable that gets assigned to partially evaluated ArithExp and is returned by eval in case method partialEvalCheck returns true
   private val partialEvalReturn: mutable.ListBuffer[ArithExp] = mutable.ListBuffer[ArithExp](ArithExp.Variable("AnyName"))
   val scopeWithExceptionMap: mutable.Map[String, mutable.Map[String, Array[ArithExp]]] = mutable.Map[String, mutable.Map[String, Array[ArithExp]]]("main" -> mutable.Map[String, Array[ArithExp]]())
@@ -53,9 +51,6 @@ object SetTheory:
   private val currentScope: mutable.Map[String, String] = mutable.Map[String, String]("current" -> "main")
   //"current" -> map
   private val currentMap: mutable.Map[String, Any] = mutable.Map[String, Any]("current" -> setMap)
-
-  def partialEvalStatement(statement: ArithExp): ArithExp =
-    statement
 
   //Call by name implementation of if
   def IF(condition: => Boolean, thenClause: => Any, elseClause: => Any): Any =
@@ -283,6 +278,39 @@ object SetTheory:
         case _ =>
           throw new RuntimeException("Only classes and interfaces can use Extends.")
       }
+
+    def map(f: ArithExp => ArithExp): ArithExp =
+      f(this)
+
+    def unionTransformer: Variable =
+      this match {
+        case unionStatement: ArithExp.pEvalUnion =>
+          if (unionStatement.setName1 == unionStatement.setName2)
+            Variable(unionStatement.setName1.asInstanceOf[String])
+          else
+            throw new RuntimeException("Cannot transform pEvalUnion with only 1 partially evaluated parameter")
+        case _ => throw new RuntimeException("Need to use unionTransformer on pEvalUnion")
+      }
+
+    def IntersectionTransformer: Variable =
+      this match {
+        case unionStatement: ArithExp.pEvalIntersection =>
+          if (unionStatement.setName1 == unionStatement.setName2)
+            Variable(unionStatement.setName1.asInstanceOf[String])
+          else
+            throw new RuntimeException("Cannot transform pEvalIntersection with only 1 partially evaluated parameter")
+        case _ => throw new RuntimeException("Need to use intersectionTransformer on pEvalIntersection")
+      }
+
+    def DifferenceTransformer: Variable =
+      this match {
+        case unionStatement: ArithExp.pEvalDifference =>
+          if (unionStatement.setName1 == unionStatement.setName2)
+            Variable(mutable.Map[String, Any](unionStatement.setName1.asInstanceOf[String] -> None))
+          else
+            throw new RuntimeException("Cannot transform pDifferenceIntersection with only 1 partially evaluated parameter")
+        case _ => throw new RuntimeException("Need to use differenceTransformer on pDifferenceIntersection")
+      }  
 
     //Private method that returns true if statement can be partially evaluated
     private def partialEvalCheck(statement: ArithExp): Boolean =
