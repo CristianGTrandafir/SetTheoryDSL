@@ -8,6 +8,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object SetTheory:
+  private val flagForInvoke: mutable.ListBuffer[Integer] = mutable.ListBuffer[Integer](0)
   private val partialEvalIFReturn: mutable.ListBuffer[Any] = mutable.ListBuffer[Any](IF(true, true, true))
   //"Global" variable that gets assigned to partially evaluated ArithExp and is returned by eval in case method partialEvalCheck returns true
   private val partialEvalReturn: mutable.ListBuffer[ArithExp] = mutable.ListBuffer[ArithExp](ArithExp.Variable("AnyName"))
@@ -310,7 +311,7 @@ object SetTheory:
           else
             throw new RuntimeException("Cannot transform pDifferenceIntersection with only 1 partially evaluated parameter")
         case _ => throw new RuntimeException("Need to use differenceTransformer on pDifferenceIntersection")
-      }  
+      }
 
     //Private method that returns true if statement can be partially evaluated
     private def partialEvalCheck(statement: ArithExp): Boolean =
@@ -479,7 +480,6 @@ object SetTheory:
           partialEvalReturn.addOne(pEvalThrowException(exceptionString))
           true
         case InvokeMethod(objectName: String, methodName: String) =>
-          partialEvalReturn.addOne(Identifier("Test"))
           val objectString = objectName
           val methodString = methodName
           if (objectMap.contains(objectString)) {
@@ -497,14 +497,14 @@ object SetTheory:
                     val objectParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
                     if (!objectParentArray.isEmpty) {
                       if (!recurseClassHierarchy(objectParentArray(0), methodName)) {
-                        partialEvalReturn.addOne(pEvalNewObject(objectString, methodName))
+                        partialEvalReturn.addOne(pEvalInvokeMethod(objectString, methodName))
                         return true
                       }
                       return false
                     }
                     //Current class has no parents
                     else {
-                      partialEvalReturn.addOne(pEvalNewObject(objectString, methodName))
+                      partialEvalReturn.addOne(pEvalInvokeMethod(objectString, methodName))
                       return true
                     }
                   }
@@ -517,7 +517,7 @@ object SetTheory:
             false
           }
           else {
-            partialEvalReturn.addOne(pEvalNewObject(objectString, methodString))
+            partialEvalReturn.addOne(pEvalInvokeMethod(objectString, methodString))
             true
           }
         case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
@@ -1190,10 +1190,17 @@ object SetTheory:
     private def checkCurrentClassForMethod(methodMap: mutable.Map[String, Array[ArithExp]], methodName: String): Boolean =
       for (method <- methodMap) {
         if (method._1 == methodName) {
-          for (commands <- method._2) {
-            if(partialEvalReturn.isEmpty)
+          if(flagForInvoke.head == 1) {
+            for (commands <- method._2) {
               commands.eval
+            }
+            flagForInvoke.clear()
+            flagForInvoke.addOne(0)
+          } else {
+            flagForInvoke.clear()
+            flagForInvoke.addOne(1)
           }
+
           return true
         }
       }

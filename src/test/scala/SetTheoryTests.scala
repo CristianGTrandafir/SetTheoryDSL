@@ -653,8 +653,8 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   behavior of "Map with DifferenceTransformer function"
 
   it should "simplify a partially evaluated Difference that has 2 sets with the same name" in {
-    Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalDifference]
-      .map(e=>e.asInstanceOf[ArithExp].IntersectionTransformer) shouldBe Variable(mutable.Map[String, Any]("RandomUndefinedSet3" -> None))
+    Difference(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalDifference]
+      .map(e=>e.asInstanceOf[ArithExp].DifferenceTransformer) shouldBe Variable(mutable.Map[String, Any]("RandomUndefinedSet3" -> None))
   }
 
 }
