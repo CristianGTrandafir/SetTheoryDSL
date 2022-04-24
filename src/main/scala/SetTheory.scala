@@ -439,46 +439,66 @@ object SetTheory:
           partialEvalReturn.addOne(pEvalUseMacro(macroString))
           true
         case NewObject(className: String, variableName: String) =>
-          val objectString = className.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val objectString = className
           if (classMap.contains(objectString))
             return false
           partialEvalReturn.addOne(pEvalNewObject(objectString, variableName))
           true
         case ThrowException(exceptionName: String) =>
-          val exceptionString = exceptionName.asInstanceOf[Identifier].eval.asInstanceOf[String]
+          val exceptionString = exceptionName
           if (exceptionMap.contains(exceptionString))
             return false
           partialEvalReturn.addOne(pEvalThrowException(exceptionString))
           true
-        case Scope(newScope: Identifier, parentScope: Identifier, command: ArithExp, exception: Any) =>
-          val nScope = newScope.asInstanceOf[Identifier]
-          val pScope = parentScope.asInstanceOf[Identifier]
-          //No partial eval of newScope
-          if (scopeMap.contains(nScope.eval.asInstanceOf[String])) {
-            //No partial eval of parentScope
-            if (scopeMap.contains(pScope.eval.asInstanceOf[String])) {
-              false
-            }
-            //Partial eval of parentScope
-            else {
-              true
-            }
-          }
-          //Check for partial eval of newScope or for newScope and parentScope
-          else {
-            //Partial eval of newScope
-            if (scopeMap.contains(pScope.eval.asInstanceOf[String])) {
-              false
-            }
-            //Partial eval of newScope and parentScope
-            else {
-              true
-            }
-          }
         case InvokeMethod(objectName: String, methodName: String) =>
-          false
+          partialEvalReturn.addOne(Identifier("Test"))
+          val objectString = objectName
+          val methodString = methodName
+          if (objectMap.contains(objectString)) {
+            val objectBlueprintMap = objectMap(objectName).asInstanceOf[mutable.Map[String, Any]]
+            val objectMethodMap = objectBlueprintMap("methods").asInstanceOf[mutable.Map[String, Any]]
+            val objectPrivateMethodMap = objectMethodMap("private").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+            val objectPublicMethodMap = objectMethodMap("public").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+            val objectProtectedMethodMap = objectMethodMap("protected").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+            val objectAbstractMethodMap = objectMethodMap("abstract").asInstanceOf[mutable.Map[String, Array[ArithExp]]]
+            if (!checkCurrentClassForMethod(objectAbstractMethodMap, methodName)) {
+              if (!checkCurrentClassForMethod(objectPublicMethodMap, methodName)) {
+                if (!checkCurrentClassForMethod(objectPrivateMethodMap, methodName)) {
+                  if (!checkCurrentClassForMethod(objectProtectedMethodMap, methodName)) {
+                    //Not found in current class scope, start checking parents
+                    val objectParentArray = objectBlueprintMap("parents").asInstanceOf[Array[String]]
+                    if (!objectParentArray.isEmpty) {
+                      if (!recurseClassHierarchy(objectParentArray(0), methodName)) {
+                        partialEvalReturn.addOne(pEvalNewObject(objectString, methodName))
+                        return true
+                      }
+                      return false
+                    }
+                    //Current class has no parents
+                    else {
+                      partialEvalReturn.addOne(pEvalNewObject(objectString, methodName))
+                      return true
+                    }
+                  }
+                  return false
+                }
+                return false
+              }
+              return false
+            }
+            false
+          }
+          else {
+            partialEvalReturn.addOne(pEvalNewObject(objectString, methodString))
+            true
+          }
         case CatchException(exceptionName: String, tryBlock: Array[ArithExp], catchBlock: Array[ArithExp]) =>
-          false
+          if(exceptionMap.contains(exceptionName))
+            false
+          else {
+            partialEvalReturn.addOne(pEvalCatchException(exceptionName, tryBlock, catchBlock))
+            true
+          }
         case _ =>
           false
       }
@@ -1143,7 +1163,8 @@ object SetTheory:
       for (method <- methodMap) {
         if (method._1 == methodName) {
           for (commands <- method._2) {
-            commands.eval
+            if(partialEvalReturn.isEmpty)
+              commands.eval
           }
           return true
         }
