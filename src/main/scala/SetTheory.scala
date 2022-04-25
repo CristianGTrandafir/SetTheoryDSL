@@ -283,13 +283,13 @@ object SetTheory:
     def map(f: ArithExp => ArithExp): ArithExp =
       f(this)
 
-    def unionTransformer: Variable =
+    def UnionTransformer: Variable =
       this match {
         case unionStatement: ArithExp.pEvalUnion =>
           if (unionStatement.setName1 == unionStatement.setName2)
             Variable(unionStatement.setName1.asInstanceOf[String])
           else
-            throw new RuntimeException("Cannot transform pEvalUnion with only 1 partially evaluated parameter")
+            throw new RuntimeException("Cannot transform pDifferenceIntersection with unequal parameters")
         case _ => throw new RuntimeException("Need to use unionTransformer on pEvalUnion")
       }
 
@@ -299,7 +299,7 @@ object SetTheory:
           if (unionStatement.setName1 == unionStatement.setName2)
             Variable(unionStatement.setName1.asInstanceOf[String])
           else
-            throw new RuntimeException("Cannot transform pEvalIntersection with only 1 partially evaluated parameter")
+            throw new RuntimeException("Cannot transform pDifferenceIntersection with unequal parameters")
         case _ => throw new RuntimeException("Need to use intersectionTransformer on pEvalIntersection")
       }
 
@@ -309,7 +309,7 @@ object SetTheory:
           if (unionStatement.setName1 == unionStatement.setName2)
             Variable(mutable.Map[String, Any](unionStatement.setName1.asInstanceOf[String] -> None))
           else
-            throw new RuntimeException("Cannot transform pDifferenceIntersection with only 1 partially evaluated parameter")
+            throw new RuntimeException("Cannot transform pDifferenceIntersection with unequal parameters")
         case _ => throw new RuntimeException("Need to use differenceTransformer on pDifferenceIntersection")
       }
 
@@ -537,7 +537,6 @@ object SetTheory:
         return partialEvalReturn.head
 
       this match {
-
         case pEvalScope(newScope: Any, parentScope: Any, command: ArithExp, exception: Any) =>
           this
         case pEvalDelete(setIdentifier: Any, objectIdentifier: Any) =>

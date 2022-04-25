@@ -482,6 +482,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
     a[RuntimeException] should be thrownBy ExceptionClassDef("testException", "field").eval
   }
 
+  //This test fails because now ThrowException gets partially evaluated
   //Test 34
   behavior of "ThrowException"
 
@@ -638,7 +639,7 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
 
   it should "simplify a partially evaluated Union that has 2 sets with the same name" in {
     Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalUnion]
-      .map(e=>e.asInstanceOf[ArithExp].unionTransformer) shouldBe Variable("RandomUndefinedSet3")
+      .map(e=>e.asInstanceOf[ArithExp].UnionTransformer) shouldBe Variable("RandomUndefinedSet3")
   }
 
   //Test 47
@@ -655,6 +656,25 @@ class SetTheoryTests extends AnyFlatSpec with Matchers {
   it should "simplify a partially evaluated Difference that has 2 sets with the same name" in {
     Difference(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval.asInstanceOf[pEvalDifference]
       .map(e=>e.asInstanceOf[ArithExp].DifferenceTransformer) shouldBe Variable(mutable.Map[String, Any]("RandomUndefinedSet3" -> None))
+  }
+
+  //Test 49
+  behavior of "Map with DifferenceTransformer function"
+
+  it should "throw an error due to using map on Difference with 2 different set names" in {
+
+    val exception = the[RuntimeException] thrownBy Difference(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet4")).eval.asInstanceOf[pEvalDifference]
+                                                      .map(e=>e.asInstanceOf[ArithExp].DifferenceTransformer)
+    exception.getMessage should equal("Cannot transform pDifferenceIntersection with unequal parameters")
+  }
+
+  //Test 50
+  behavior of "Map with DifferenceTransformer function"
+
+  it should "throw an error due to using map on wrong type of ArithExp command" in {
+    val exception = the[RuntimeException] thrownBy Union(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet4")).eval.asInstanceOf[pEvalUnion]
+      .map(e=>e.asInstanceOf[ArithExp].DifferenceTransformer)
+    exception.getMessage should equal("Need to use differenceTransformer on pDifferenceIntersection")
   }
 
 }

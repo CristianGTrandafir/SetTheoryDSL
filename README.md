@@ -8,113 +8,92 @@ The first one, SetTheory.AccessModifiers.\*, is an enum that you need to specify
 The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
 The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-##How the commands work:
+##How the new commands work:
 
-###Updated old commands:
+PartialEvalCheck has 1 parameter.
+This command is not called by the user, but it takes each ArithExp command that .eval is called on as a parameter.
+The ArithExp command is then attempted to be partially evaluated.
+True is returned if the partial evaluation was successful, false if it was unsuccessful.
 
-Scope has 4 parameters.
-The first is an Identifier* command for the scope name you want to create.
-The second is an Identifier* command for the scope hierarchy you want to create your new scope in.
-The third is an ArithExp command.
-The new fourth is an optional parameter for CatchException, which sets up the equivalent of a try/catch block and registers the scope to catch a thrown exception.
+Map has 1 parameter.
+The parameter is supposed to take one of the predefined transformer functions and apply it to a partially evaluated ArithExp statement.
+An optimized partially evaluated function is returned.
 
-\*Identifier has 1 parameter.
-It is simply a string that is used to name something.
+UnionTransformer has no parameters.
+It reduces a Union of 2 sets with the same name to 1 set.
+Variable(setName) is returned.
 
-###New commands:
+DifferenceTransformer has no parameters.
+It reduces a Difference of 2 sets with the same name to the empty set.
+mutable.Map(setName -> None) is returned.
 
-IF has 3 parameters. 
-The first is a boolean condition that is analogous to if(condition) in Java.
-The second is an ArithExp expression that will be lazily evaluated if the condition evaluates to true.
-The third is an ArithExp expression that will be lazily evaluated if the condition evaluates to fasle.
+SymmetricTransformer has no parameters.
+It reduces a Symmetric of 2 sets with the same name 1 set.
+Variable(setName)
 
-ExceptionClassDef has 2 parameters.
-The first is a string to name the exception class.
-The second is a string for the field of the exception class.
+Here is a well=formed map statement with an optimization transformer:
 
-ThrowException has 1 parameter.
-It is a string for the type of exception to throw.
+    Difference(Identifier("RandomUndefinedSet3"), Identifier("RandomUndefinedSet3")).eval
+    .asInstanceOf[pEvalDifference]
+    .map(e=>e.asInstanceOf[ArithExp].DifferenceTransformer)
 
-CatchException has 3 parameters.
-The first is a string for the exception to catch in the catch block.
-The second is an Array of ArithExp commands that will be lazily evaluated analogously to sequential execution of a try block.
-The third is an Array of ArithExp commands that will be lazily evaluated analogously to sequential execution of a catch block (provided that it catches a thrown exception).
+The first line is the Difference ArithExp command. 
+It will get partially evaluated to pEvalDifference("RandomUndefinedSet3", "RandomUndefinedSet3").
+The second line is a cast to pEvalDifference because my eval method returns Any because of how I implemented the HW1 and HW2 solutions.
+The third line is calling map and passing in an optimizing transformer function, DifferenceTransformer.
+Again, a cast is necessary because my type inference for eval is too vague.
 
-Information on other commands can be found in previous homeworks' readmes.
+##How Partial Evaluation is implemented:
 
-##How IF and the Exceptions are implemented:
+At the start of eval, there is a new check that checks if the ArithExp command can be partially evaluated.
+The check is done by the method PartialEvalCheck.
+True is returned if the ArithExp command can be partially evaluated, and the partially evaluated ArithExp statement is returned from eval.
+If false is returned, regular evaluation occurs.
 
-All of the parameters to IF are call by name.
-IF functions like in any other language - it evaluates a condition to true or false, then executes the true block or false block of code depending on the condition value.
-Here is a sample usage of IF:
+Partially evaluated statements are ArithExp statements prefixed with "pEval".
+These are newly defined data types for partial evaluation.
+A command of the form
 
-    IF (
- 
-        1+1 == 2,     //Boolean expression
+    Union(Identifier("DefinedSet1"), Identifier("UndefinedSet2")).eval
 
-        Assign(Identifier("trueSet"), Insert(Identifier("trueVar"), Variable(True))).eval, //True branch
+will evaluate to:
 
-        Assign(Identifier("falseSet"), Insert(Identifier("falseVar"), Variable(False))).eval   //False branch
+    pEvalUnion(Identifier("DefinedSet1"), "UndefinedSet2")
 
-    )
+Most ArithExp commands will be partially evaluated, but it will be simpler to list the ones that are not and the reason why not:
 
-Because the expressions are lazily evaluated, calling .eval does nothing until the boolean expression is evaluated inside the function call and either the true or false branch runs.
+Variable and Identifier - these are wrappers that are only ever called as parameters to other commands.
+Normal evaluation of them always returns their stored content, so there is no room for partial evaluation. 
 
-exceptionMap is a new variable that maps exceptions defined by ExceptionClassDef to their fields. 
-Calling ExceptionClassDef creates a new addition to this map, unless the exception name is already defined, in which case a RuntimeException is thrown to the user to use a different name.
+Insert, Assign, Macro - Insert is only ever called as a parameter of Assign.
+They both work to assign a definite variable. 
+Macro also creates a definite Macro variable. 
+So there is no room for partial evaluation in these commands.
 
-scopeWithExceptionMap is a new variable that maps scopes to the exceptions they catch.
+ClassDef, AbstractClassDef, InterfaceDecl - these all define new classes/interfaces.
+There is no room for partial evaluation in these commands.
 
-    "scopeName" -> Map("exceptionName1" -> Array[ArithExpCommands]),
-                      ("exceptionName2" -> Array[ArithExpCommands])
-    "scopeName2" -> Map("exceptionName4" -> Array[ArithExpCommands])
+ExceptionClassDef - this defines an exception.
+Again, no room for partial evaluation.
 
-Each scope is mapped to another map.
-This second map contains the exception names as keys and the catch blocks within the scope as values.
+Method, Constructor, Field - these are only ever used as parameters when defining a class or interface.
+Since they define methods, constructors, and fields, there is no room for partial evaluation.
 
-Upon CatchException.eval, only the try block executes right away.
-Each CatchException definition "registers" a scope with an exceptionName and a catch block (each instance of "Array[ArithExpCommands]").
-The same scope can be registered with multiple exception types.
-Each exception type has its own catch block.
-
-ThrowException throws an exception from the exceptionMap (test 34 shows the RuntimeException thrown if exception is not defined in exceptionMap).
-Once the exception is thrown in a scope, the helper method recurseCheckForException is called.
-The helper method checks the current scope for a catch block of the specified exception, then recursively checks each parent scope until it reaches the main scope (final scope level).
-If the exception is still not handled after main is checked, a RuntimeException is thrown to the user (test 35).
-Test 38 showcase throwing an exception from a nested scope.
-
-There is also another helper method, executeCommands that is called whenever a try or catch block executes.
-It recursively calls itself and evals each command, until a ThrowException is matched.
-If ThrowException is identified, then the helper method executes the ThrowException and returns (test 39).
-This means that commands after any ThrowException don't get executed.
-This means that both try and catch blocks can throw exceptions (test 40) and operate like in Java.
-
-Here is a sample of all 3 exception enums:
-
-    1 ExceptionClassDef("testException", "field")
-    2 Scope(Identifier("main"), Identifier("main"), Assign(Identifier("se"), Insert(Identifier("var4"), Variable(1))),
-    3     CatchException("testException",
-    4     Array[ArithExp](Assign(Identifier("try23"), Insert(Identifier("tryVar23"), Variable(1)))),
-    5     Array[ArithExp](Assign(Identifier("catchParent"), Insert(Identifier("catchVar"), Variable(1))))
-    6     )
-    7 ).eval
-    8 Scope(Identifier("test"), Identifier("main"), ThrowException("testException"), 0).eval
-
-The first line is a definition of testException.
-The second line is the HW1 Scope definition.
-The third line is the start of the CatchException parameter to Scope, containing the exception name to catch.
-The fourth line is the try block.
-The fifth line is the catch block.
-The eighth line is throwing an exception from a parent scope ("main.test").
-
-The program will throw the exception, check the current scope ("main.test") to see if it's registered to an exception and catch block, fail, then check the parent scope ("main") for the exception and catch block, succeed, then execute main's testException catch block.
+Every other command will partially evaluate to pEval + the command name, with the defined variable's structure preserved and the undefined variable reduced to its String name.
+Each pEval + command name data type has parameters of type Any, so multiple parameters can be partially evaluated and in any order to the same pEval + command name.
+When eval is called on a partially evaluated command, it simply returns itself.
 
 ##Limitations
 
-I designed the IF statement to only take in 1 ArithExp expression for the true branch and for the false branch.
-This would be inconvenient to users of the language who want to include multiple statements in the branches.
-I did this not for any design considerations, but to get myself familiar with the => operator in function calls.
-I researched and found that you can't mix varargs with call by name in Scala.
+I did not use case classes in my project so I could not copy the parameterized type map from the WrapperContainer.scala sample code that was designed in class.
+The command still works, but I followed the definition from the HW5 pdf instead.
+
+My eval statement returns Any, not Set[Any] because of previous implementation decisions I made in HW1 and HW2.
+This results in ugly casting needed to make use of map.
 
 Note to the grader: I made various data structures that should be private public so that I could easily reference them in the Scalatests. 
 They are: classMap, objectMap, setMap, interfaceMap, exceptionMap, and scopeWithExceptionMap.
+
+Each branch on my Github has my past readmes corresponding to that homework assignment. 
+I removed the past command definitions from this one to make it more concise.
+Everything else about my language can be found in my HW1/2/3/4 readmes.
