@@ -1,14 +1,14 @@
 # CS474Homework5
 Cristian Trandafir
 
-##How to set up:
+## How to set up:
 
 Include the imports SetTheory.AccessModifier.\*, SetTheory.ArithExp.\*, and SetTheory.ArithExp at the top of your program.
 The first one, SetTheory.AccessModifiers.\*, is an enum that you need to specify the access modifiers for fields and methods.
 The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
 The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-##How the new commands work:
+## How the new commands work:
 
 PartialEvalCheck has 1 parameter.
 This command is not called by the user, but it takes each ArithExp command that .eval is called on as a parameter.
@@ -43,7 +43,7 @@ The second line is a cast to pEvalDifference because my eval method returns Any 
 The third line is calling map and passing in an optimizing transformer function, DifferenceTransformer.
 Again, a cast is necessary because my type inference for eval is too vague.
 
-##How Partial Evaluation is implemented:
+## How Partial Evaluation is implemented:
 
 At the start of eval, there is a new check that checks if the ArithExp command can be partially evaluated.
 The check is done by the method PartialEvalCheck.
@@ -83,7 +83,7 @@ Every other command will partially evaluate to pEval + the command name, with th
 Each pEval + command name data type has parameters of type Any, so multiple parameters can be partially evaluated and in any order to the same pEval + command name.
 When eval is called on a partially evaluated command, it simply returns itself.
 
-##Limitations
+## Limitations
 
 I did not use case classes in my project so I could not copy the parameterized type map from the WrapperContainer.scala sample code that was designed in class.
 The command still works, but I followed the definition from the HW5 pdf instead.
