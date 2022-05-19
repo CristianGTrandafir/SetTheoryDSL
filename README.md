@@ -1,16 +1,16 @@
 # CS474Homework4
 Cristian Trandafir
 
-##How to set up:
+## How to set up:
 
 Include the imports SetTheory.AccessModifier.\*, SetTheory.ArithExp.\*, and SetTheory.ArithExp at the top of your program.
 The first one, SetTheory.AccessModifiers.\*, is an enum that you need to specify the access modifiers for fields and methods.
 The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
 The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-##How the commands work:
+## How the commands work:
 
-###Updated old commands:
+### Updated old commands:
 
 Scope has 4 parameters.
 The first is an Identifier* command for the scope name you want to create.
@@ -21,7 +21,7 @@ The new fourth is an optional parameter for CatchException, which sets up the eq
 \*Identifier has 1 parameter.
 It is simply a string that is used to name something.
 
-###New commands:
+### New commands:
 
 IF has 3 parameters. 
 The first is a boolean condition that is analogous to if(condition) in Java.
@@ -42,7 +42,7 @@ The third is an Array of ArithExp commands that will be lazily evaluated analogo
 
 Information on other commands can be found in previous homeworks' readmes.
 
-##How IF and the Exceptions are implemented:
+## How IF and the Exceptions are implemented:
 
 All of the parameters to IF are call by name.
 IF functions like in any other language - it evaluates a condition to true or false, then executes the true block or false block of code depending on the condition value.
@@ -109,7 +109,7 @@ The eighth line is throwing an exception from a parent scope ("main.test").
 
 The program will throw the exception, check the current scope ("main.test") to see if it's registered to an exception and catch block, fail, then check the parent scope ("main") for the exception and catch block, succeed, then execute main's testException catch block.
 
-##Limitations
+## Limitations
 
 I designed the IF statement to only take in 1 ArithExp expression for the true branch and for the false branch.
 This would be inconvenient to users of the language who want to include multiple statements in the branches.
