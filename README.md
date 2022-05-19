@@ -6,16 +6,16 @@ Cristian Trandafir
 I removed the readme text from HW1 and HW2 - they can be found under the HW1 and HW2 branches.
 I tried to include all the relevant details from the past readmes in this one.
 
-##How to set up:
+## How to set up:
 
 Include the imports SetTheory.AccessModifier.\*, SetTheory.ArithExp.\*, and SetTheory.ArithExp at the top of your program.
 The first one, SetTheory.AccessModifiers.\*, is a new enum that you need to specify the access modifiers for fields and methods.
 The second one, SetTheory.ArithExp.\*, is needed so that you can use any of the ArithExp commands like Scope() or ClassDef().
 The third one, SetTheory.ArithExp, is needed so you can specify the element types of the Arrays you pass in as methods (ArithExp types).
 
-##How the new commands work:
+## How the new commands work:
 
-####Old commands for reference:
+#### Old commands for reference:
 
 Field has 2 parameters. The first is a String for the name of the class field you want to define. The second is a String for the access modifier of the field you want to define - "public"/"private"/"protected".
 
@@ -25,7 +25,7 @@ FieldAssign has 2 parameters. The first is a String that specifies the field nam
 
 Constructor has 1 parameter. It is an Array of FieldAssigns - you can input an arbitrary amount of FieldAssigns into the constructor body that will execute when NewObject is called.
 
-####New commands:
+#### New commands:
 
 Public, Private, Protected, Abstract.
 These are new elements of the AccessModifier enum.
@@ -79,7 +79,7 @@ Here is an example of a well-formed AbstractClassDef statement:
 This statement can include nested ClassDefs in place of the 0, or nested InterfaceDecls in place of the 1.
 It can be postfixed with "Extends "ClassName"" or with "Implements "InterfaceName"".
 
-##How the Classes and Interfaces are implemented:
+## How the Classes and Interfaces are implemented:
 
     "className" -> Map("name" -> "className"
 
@@ -110,7 +110,7 @@ One new addition is that support for nested Interfaces has been added.
 The AbstractClassDef data structure is identical to this.
 The InterfaceDecl data structure lacks the constructor field, and it can only have abstract methods, but it is otherwise identical.
 
-###How abstract methods work:
+### How abstract methods work:
 
 Abstract is an element of the AccessModifier enum. 
 It works just like the other access modifiers.
@@ -127,9 +127,9 @@ This means that there is a default implementation for it.
 Any class that extends or implements this method does not need to provide their own definition for the method.
 Hence, they can be instantiated normally.
 
-##Questions:
+## Questions:
 
-####Can a class/interface inherit from itself?
+#### Can a class/interface inherit from itself?
 
 No.
 There is a check in Extends and Implements that prevents this from happening. 
@@ -137,7 +137,7 @@ See Test 27.
 This would not break anything in my implementation, 
 but I disallowed it because it's more likely that the user of my language doesn't want to extend the exact same class - after all, it's pointless.
 
-####Can an interface inherit from an abstract class with all pure methods?
+#### Can an interface inherit from an abstract class with all pure methods?
 
 No.
 I did not allow interfaces to Extends classes, only other interfaces.
@@ -146,7 +146,7 @@ This is because my abstract classes include constructors, so having an interface
 I would have had to ignore the constructor and include a check that all of the abstract class's methods are pure.
 I don't think many users will want to do this so I disallowed it.
 
-####Can an interface implement another interface?
+#### Can an interface implement another interface?
 
 No.
 The documentation said this should throw an error.
@@ -155,7 +155,7 @@ Although the documentation said it should throw an error, Extends and Implements
 I could have let interfaces Implements other interfaces instead of Extends them because NewObject and MethodInvocation handle the instantiation and method logic.
 Extends and Implements mainly update the parent array (my version of a vtable) to hold the parent class's name.
 
-####Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
+#### Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
 
 No.
 I only allowed classes to Implements a single interface.
@@ -165,36 +165,36 @@ A class cannot Extends 2 classes or Implements 2 interfaces so no problems with 
 This is a serious limitation since most languages have some version of multiple inheritance.
 But I didn't want to implement multiple inheritance because of all the extra bugs that come with it.
 
-####Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
+#### Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
 
 Yes. 
 The most recently defined method will simply shadow the parent methods.
 This was the easiest resolution to implement.
 
-####Can an abstract class implement interfaces?
+#### Can an abstract class implement interfaces?
 
 Yes.
 See Test 28.
 I didn't foresee any complications by doing this so I allowed it.
 Neither abstract class nor interface can be instantiated.
 
-####Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
+#### Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
 
 Classes can only implement 1 interface.
 I did not include the return type as part of the method signature, so can method in a child class with the same name and AccessModifier will shadow the method in the parent class.
 
-####Can an abstract class inherit from a concrete class?
+#### Can an abstract class inherit from a concrete class?
 
 Yes.
 There is no restriction on this because I allowed abstract classes to have public, private, and protected methods, as well as constructors.
 See Test 29.
 
-####Can an abstract class/interface be instantiated as anonymous concrete classes?
+#### Can an abstract class/interface be instantiated as anonymous concrete classes?
 
 No.
 I am inexperienced with anonymous classes so I'm not sure how they work or how I would implement them.
 
-##Limitations
+## Limitations
 
 The biggest limitation is that classes cannot Implements multiple interfaces. 
 Neither can classes Extends multiple classes.
